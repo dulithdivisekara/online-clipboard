@@ -11,7 +11,7 @@ export interface Props {
 }
 
 const {
-  title = "Clipboard — Instant Text, File Drop & Live Sync | clipboard.dulith.me",
+  title = "Online Clipboard | dulith.me",
   description = "Free, fast online clipboard with optional end-to-end encryption, burn-after-read, Markdown preview, real-time WebSocket sync, collaborative scribble, file sharing, and URL analytics.",
   canonicalPath = Astro.url.pathname,
   noIndex = false,
@@ -118,15 +118,9 @@ const jsonLdPayload = structuredData
   </head>
 
   <body>
-    <!-- Offscreen Snell's Law Liquid Glass Optical Filters -->
+    <!-- Offscreen Snell's Law Liquid Glass Optical Filter -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
       <defs>
-        <filter id="lg-liquid-lens" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="soft" />
-          <feImage id="lgBarDispImg" x="0" y="0" width="600" height="52" preserveAspectRatio="none" result="bar_disp" />
-          <feDisplacementMap in="soft" in2="bar_disp" scale="8" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-
         <filter id="lg-thumb-lens" x="-28%" y="-56%" width="156%" height="212%" color-interpolation-filters="sRGB">
           <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="blurred_source" />
           <feImage id="lgDispImg" x="0" y="0" width="120" height="40" preserveAspectRatio="none" result="displacement_map" />
@@ -152,7 +146,7 @@ const jsonLdPayload = structuredData
 
     <div class="shell">
       <!-- Layer 2: Floating Pill Navbar -->
-      <header class="top-bar liquid-glass refract-rim">
+      <header class="top-bar liquid-glass">
         <a href="/" class="brand" aria-label="Clipboard Home">
           <span class="brand-icon">
             <img src="/favicon.png" alt="" width="28" height="28" />
@@ -160,7 +154,8 @@ const jsonLdPayload = structuredData
           <span>Clipboard</span>
         </a>
 
-        <nav class="nav-links-desktop" aria-label="Primary navigation">
+        <nav id="desktopNav" class="nav-links-desktop" aria-label="Primary navigation">
+          <span id="navBubble" class="nav-bubble" aria-hidden="true"></span>
           {
             NAV_PAGES.map((p) => {
               const active = p.href === "/" ? pathname === "/" : pathname.startsWith(p.href);
@@ -176,8 +171,44 @@ const jsonLdPayload = structuredData
             })
           }
         </nav>
+        <script is:inline>
+          (function () {
+            try {
+              var b = document.getElementById("navBubble");
+              var nav = document.getElementById("desktopNav");
+              if (!b || !nav) return;
+              var prev = sessionStorage.getItem("cb-nav-bubble");
+              var target = prev ? JSON.parse(prev) : null;
+              var active = nav.querySelector(".nav-link.active");
+              if (target && typeof target.x === "number" && typeof target.w === "number") {
+                b.style.transition = "none";
+                b.style.width = target.w + "px";
+                b.style.transform = "translate3d(" + target.x + "px, 0, 0)";
+                b.style.opacity = "1";
+              } else if (active && active.offsetWidth > 0) {
+                b.style.transition = "none";
+                b.style.width = active.offsetWidth + "px";
+                b.style.transform = "translate3d(" + active.offsetLeft + "px, 0, 0)";
+                b.style.opacity = "1";
+              }
+            } catch (e) {}
+          })();
+        </script>
 
         <div class="nav-actions">
+          <a
+            href="https://github.com/dulithdivisekara/online-clipboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="nav-circle-btn"
+            aria-label="View source repository on GitHub"
+            title="GitHub Repository"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 1.27a11 11 0 0 0-3.48 21.46c.55.1.75-.24.75-.53v-1.85c-3.05.66-3.7-1.47-3.7-1.47-.5-1.27-1.22-1.6-1.22-1.6-.99-.68.08-.67.08-.67 1.1.08 1.68 1.13 1.68 1.13.98 1.67 2.56 1.19 3.19.91.1-.71.38-1.19.69-1.46-2.44-.28-5-1.22-5-5.43 0-1.2.43-2.18 1.13-2.95-.11-.28-.49-1.4.11-2.91 0 0 .92-.3 3.02 1.13a10.5 10.5 0 0 1 5.5 0c2.1-1.43 3.02-1.13 3.02-1.13.6 1.51.22 2.63.11 2.91.7.77 1.13 1.75 1.13 2.95 0 4.22-2.57 5.15-5.02 5.42.39.34.74 1.01.74 2.04v3.02c0 .29.2.63.76.53A11 11 0 0 0 12 1.27Z" />
+            </svg>
+          </a>
+
           <button
             id="themeToggleBtn"
             type="button"
@@ -238,19 +269,27 @@ const jsonLdPayload = structuredData
       </main>
 
       <footer class="site-footer">
-        <div class="footer-links">
-          <a href="/">Clipboard</a>
-          <a href="/live-clipboard">Live Sync</a>
-          <a href="/scribble">Scribble</a>
-          <a href="/file-drop">File Drop</a>
-          <a href="/url">URL Shortener</a>
-          <a href="/shortcuts">Shortcuts API</a>
-          <a href="/vault">Vault</a>
-          <a href="https://github.com/dulithdivisekara/online-clipboard" target="_blank" rel="noopener noreferrer">GitHub</a>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
-          <span class="version-pill">v2.0 · clipboard.dulith.me</span>
-          <span>Zero-knowledge E2EE optional · Cloudflare Edge</span>
+        <div class="footer-meta">
+          <a
+            href="https://github.com/dulithdivisekara/online-clipboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="version-pill"
+          >
+            Open Source · MIT
+          </a>
+          <span>© 2026 Dulith Divisekara. All rights reserved.</span>
+          <a
+            href="https://github.com/dulithdivisekara"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="footer-link"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 1.27a11 11 0 0 0-3.48 21.46c.55.1.75-.24.75-.53v-1.85c-3.05.66-3.7-1.47-3.7-1.47-.5-1.27-1.22-1.6-1.22-1.6-.99-.68.08-.67.08-.67 1.1.08 1.68 1.13 1.68 1.13.98 1.67 2.56 1.19 3.19.91.1-.71.38-1.19.69-1.46-2.44-.28-5-1.22-5-5.43 0-1.2.43-2.18 1.13-2.95-.11-.28-.49-1.4.11-2.91 0 0 .92-.3 3.02 1.13a10.5 10.5 0 0 1 5.5 0c2.1-1.43 3.02-1.13 3.02-1.13.6 1.51.22 2.63.11 2.91.7.77 1.13 1.75 1.13 2.95 0 4.22-2.57 5.15-5.02 5.42.39.34.74 1.01.74 2.04v3.02c0 .29.2.63.76.53A11 11 0 0 0 12 1.27Z" />
+            </svg>
+            <span>@dulithdivisekara</span>
+          </a>
         </div>
       </footer>
     </div>
@@ -259,7 +298,7 @@ const jsonLdPayload = structuredData
     <div id="globalToast" class="toast liquid-glass" role="status" aria-live="polite"></div>
 
     <script>
-      import { initLiquidOptics } from "@lib/liquid-optics";
+      import { attachNavBubble, initLiquidOptics } from "@lib/liquid-optics";
 
       const THEME_ORDER = ["auto", "light", "dark"] as const;
       type ThemeMode = (typeof THEME_ORDER)[number];
@@ -332,6 +371,7 @@ const jsonLdPayload = structuredData
       });
 
       initLiquidOptics();
+      attachNavBubble(document.getElementById("desktopNav"));
     </script>
   </body>
 </html>

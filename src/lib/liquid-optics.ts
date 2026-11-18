@@ -153,23 +153,168 @@ export function initLiquidOptics(): void {
       target.style.setProperty("--my", `${((ev.clientY - rect.top) / rect.height) * 100}%`);
     });
   }
+}
 
-  // Build Snell's Law SVG optical maps for navbar & thumb
-  const barImg = document.getElementById("lgBarDispImg");
-  const topBar = document.querySelector(".top-bar");
-  if (barImg && topBar && typeof ResizeObserver !== "undefined") {
-    const updateBarMap = () => {
-      const r = topBar.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
-        barImg.setAttribute("width", String(Math.round(r.width)));
-        barImg.setAttribute("height", String(Math.round(r.height)));
-        barImg.setAttribute("href", createOpticalDataUri(r.width, r.height, 14, "disp"));
+export function attachNavBubble(nav: HTMLElement | null): () => void {
+  if (typeof window === "undefined" || !nav) return () => {};
+  const bubble = nav.querySelector<HTMLElement>("#navBubble");
+  const links = Array.from(nav.querySelectorAll<HTMLAnchorElement>(".nav-link"));
+  if (!bubble || links.length === 0) return () => {};
+
+  const NAV_BUBBLE_KEY = "cb-nav-bubble";
+  const activeLink = nav.querySelector<HTMLAnchorElement>(".nav-link.active") || links[0];
+  const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const setBubbleBox = (x: number, width: number, swell = false, animate = true) => {
+    if (!animate || reducedMotion()) {
+      bubble.style.transition = "none";
+    } else {
+      bubble.style.transition = "";
+    }
+    bubble.style.width = `${width}px`;
+    bubble.style.transform = `translate3d(${x}px, 0, 0)${swell ? " scale(1.03, 0.96)" : ""}`;
+    bubble.style.opacity = "1";
+  };
+
+  const snapToLink = (link: HTMLElement, swell = false, animate = true) => {
+    setBubbleBox(link.offsetLeft, link.offsetWidth, swell, animate);
+  };
+
+  // Seamless cross-page spring entry from the previously clicked pill if available
+  let restoredPrev = false;
+  try {
+    const raw = sessionStorage.getItem(NAV_BUBBLE_KEY);
+    if (raw) {
+      sessionStorage.removeItem(NAV_BUBBLE_KEY);
+      const prev = JSON.parse(raw) as { x?: number; w?: number };
+      if (typeof prev.x === "number" && typeof prev.w === "number" && prev.w > 0) {
+        restoredPrev = true;
+        setBubbleBox(prev.x, prev.w, false, false);
+        void bubble.offsetWidth;
+        requestAnimationFrame(() => snapToLink(activeLink, false, true));
+      }
+    }
+  } catch {
+    // ignore storage failures
+  }
+
+  if (!restoredPrev) {
+    snapToLink(activeLink, false, false);
+    requestAnimationFrame(() => {
+      bubble.style.transition = "";
+    });
+  }
+
+  let pointerDown = false;
+  let dragging = false;
+  let downX = 0;
+
+  const findLinkAtClientX = (clientX: number): HTMLAnchorElement | null => {
+    let best: HTMLAnchorElement | null = null;
+    let bestDist = Infinity;
+    for (const link of links) {
+      const r = link.getBoundingClientRect();
+      if (clientX >= r.left && clientX <= r.right) return link;
+      const center = (r.left + r.right) / 2;
+      const dist = Math.abs(clientX - center);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = link;
+      }
+    }
+    return best;
+  };
+
+  const enterHandlers = links.map((link) => {
+    const onEnter = () => {
+      if (!dragging) snapToLink(link, link !== activeLink, true);
+    };
+    const onFocus = () => snapToLink(link, false, true);
+    const onClick = () => {
+      try {
+        sessionStorage.setItem(
+          NAV_BUBBLE_KEY,
+          JSON.stringify({ x: link.offsetLeft, w: link.offsetWidth })
+        );
+      } catch {
+        // ignore
       }
     };
-    const ro = new ResizeObserver(updateBarMap);
-    ro.observe(topBar);
-    updateBarMap();
+    link.addEventListener("pointerenter", onEnter);
+    link.addEventListener("focus", onFocus);
+    link.addEventListener("click", onClick);
+    return () => {
+      link.removeEventListener("pointerenter", onEnter);
+      link.removeEventListener("focus", onFocus);
+      link.removeEventListener("click", onClick);
+    };
+  });
+
+  const onNavLeave = () => {
+    if (!dragging) snapToLink(activeLink, false, true);
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
+    pointerDown = true;
+    dragging = false;
+    downX = e.clientX;
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!pointerDown) return;
+    if (!dragging && Math.abs(e.clientX - downX) > 6) {
+      dragging = true;
+      nav.classList.add("is-dragging");
+    }
+    if (!dragging) return;
+    const hit = findLinkAtClientX(e.clientX);
+    if (hit) snapToLink(hit, true, true);
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!pointerDown) return;
+    pointerDown = false;
+    if (!dragging) return;
+    dragging = false;
+    nav.classList.remove("is-dragging");
+    const hit = findLinkAtClientX(e.clientX);
+    if (hit && hit !== activeLink) {
+      try {
+        sessionStorage.setItem(
+          NAV_BUBBLE_KEY,
+          JSON.stringify({ x: hit.offsetLeft, w: hit.offsetWidth })
+        );
+      } catch {
+        // ignore
+      }
+      window.location.href = hit.href;
+    } else {
+      snapToLink(activeLink, false, true);
+    }
+  };
+
+  nav.addEventListener("pointerleave", onNavLeave);
+  nav.addEventListener("pointerdown", onPointerDown);
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  window.addEventListener("pointercancel", onPointerUp);
+
+  let ro: ResizeObserver | null = null;
+  if (typeof ResizeObserver !== "undefined") {
+    ro = new ResizeObserver(() => snapToLink(activeLink, false, false));
+    ro.observe(nav);
   }
+
+  return () => {
+    enterHandlers.forEach((off) => off());
+    ro?.disconnect();
+    nav.removeEventListener("pointerleave", onNavLeave);
+    nav.removeEventListener("pointerdown", onPointerDown);
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    window.removeEventListener("pointercancel", onPointerUp);
+  };
 }
 
 export function attachSegmentedSpring(

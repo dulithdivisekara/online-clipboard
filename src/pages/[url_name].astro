@@ -34,7 +34,7 @@ if (result.action === "not_found") {
 ---
 
 <PageLayout
-  title={result.action === "stats" ? `Analytics /${result.stats.code} | clipboard.dulith.me` : "Page Not Found | clipboard.dulith.me"}
+  title={result.action === "stats" ? `Stats /${result.stats.code} | Clipboard` : "Not Found | Clipboard"}
   description="Shortened URL analytics and redirect."
   noIndex={true}
 >
@@ -42,7 +42,6 @@ if (result.action === "not_found") {
     result.action === "stats" ? (
       <>
         <section class="hero">
-          <span class="eyebrow">Short Link Analytics</span>
           <h1>Link Telemetry</h1>
         </section>
         <UrlAnalyticsView client:load {...result.stats} />

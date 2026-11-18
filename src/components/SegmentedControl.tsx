@@ -57,7 +57,11 @@ export default function SegmentedControl<T extends string>({
         role="tablist"
         aria-label={ariaLabel}
       >
-        <div className="seg-thumb" aria-hidden="true" />
+        <div
+          className="seg-thumb"
+          style={{ "--seg-count": options.length } as React.CSSProperties}
+          aria-hidden="true"
+        />
         {options.map((opt, idx) => {
           const selected = opt.value === value;
           return (
