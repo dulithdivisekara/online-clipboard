@@ -1,9 +1,13 @@
 /// <reference types="astro/client" />
-interface ImportMetaEnv {
-  readonly PUBLIC_SUPABASE_URL: string;
-  readonly PUBLIC_SUPABASE_KEY: string;
-}
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
+declare namespace App {
+  interface Env {
+    CLIPBOARD_DB: D1Database;
+    CLIPBOARD_KV: KVNamespace;
+    CLIPBOARD_FILES: R2Bucket;
+    ROOM_HUB: DurableObjectNamespace;
+    VAULT_PASSCODE?: string;
+    SESSION_SECRET?: string;
+    QUICK_API_TOKEN?: string;
+  }
 }

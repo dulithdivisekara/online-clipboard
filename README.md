@@ -1,84 +1,199 @@
-# [ClipBoard](https://0cb.vercel.app/)
+<p align="center">
+  <a href="https://clipboard.dulith.me" target="_blank" rel="noopener noreferrer">
+    <img src="assets/logo.png" width="110" alt="Clipboard Logo" />
+  </a>
+</p>
 
-#### 0cb is a free online tool that help you to Copy and Retrieve Text and images between any devices. Just copy the text and share the ID.
+<h1 align="center">Online Clipboard</h1>
 
-If you want to edit the Text in future, give `-e` in the end of your Clipboard ID while creating one. Try it out.
+<p align="center">
+  Cloudflare Workers online clipboard, live WebSocket sync, collaborative scribble, password-protected file drop, and URL analytics at clipboard.dulith.me.
+</p>
 
-`NOTE: You need to create a Password for this feature. Don't forget it.`
+<p align="center">
+  <a href="https://astro.build/"><img src="https://img.shields.io/badge/Astro-6.4-BC52EE?style=flat-square" alt="Astro"></a>
+  <a href="https://workers.cloudflare.com/"><img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square" alt="Cloudflare Workers"></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-0A74E6?style=flat-square" alt="React"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-177A2B?style=flat-square" alt="License"></a>
+</p>
 
-#### 0cb also have URL shortener with `stats` which gives number of user clicked the link, and user details such as browser name, operating system, and PC type in an graphical interface.
+<p align="center">
+  <a href="#overview">Overview</a> &bull;
+  <a href="#architecture">Architecture</a> &bull;
+  <a href="#credits-and-enhancements">Credits</a> &bull;
+  <a href="#project-structure">Structure</a> &bull;
+  <a href="#installation">Installation</a> &bull;
+  <a href="#usage">Usage</a> &bull;
+  <a href="#verification-tests">Testing</a> &bull;
+  <a href="#security-and-privacy">Security</a> &bull;
+  <a href="#license">License</a>
+</p>
 
-<hr/>
+## Overview
 
-### Migration from React to Astro. Originl Repo [here](https://github.com/SarathAdhi/ClipBoard)
+Online Clipboard (`clipboard.dulith.me`) is a cross-device transfer suite running on Cloudflare Workers, D1, KV, R2, and Durable Objects. It lets users save and retrieve plain text, Markdown with syntax-highlighted code blocks, images, and files up to 98 MB across mobile and desktop browsers, or sync directly from Apple Shortcuts, Android HTTP Shortcuts, and terminal `curl`.
 
-<table align="center"><tr><td valign="top" width="33%">
+The interface follows Apple Human Interface Guidelines and an optical Liquid Glass material system featuring two-layer depth separation, Auto/Light/Dark zero-FOUC theming, Snell's Law SVG refraction on floating pills, hold-and-drag spring segmented controls, and full `320px` responsive support.
 
-### Astro (Current)
+## Architecture
 
-<div align="center">
+| Route | Capability | Persistence & Transport | Privacy Controls |
+| :--- | :--- | :--- | :--- |
+| `/` | Text, Markdown, Code, Image Clipboard | Cloudflare D1 + R2 | Optional AES-256-GCM E2EE, PBKDF2 Password, TTL, Burn-After-Read |
+| `/live-clipboard` | Real-Time Text & Image Room | Durable Objects WebSockets | Ephemeral room ID, `noindex` on room sessions |
+| `/scribble` | Collaborative Drawing Canvas | Durable Objects WebSockets | Multi-user stroke history, PNG export |
+| `/file-drop` | Multi-File Transfer (up to 98 MB) | Cloudflare R2 + Durable Objects | Download count limit, TTL expiry, Password |
+| `/url` & `/u/[code]` | URL Shortener & Click Telemetry | Cloudflare D1 | Browser, OS, device, country breakdown (`+` suffix) |
+| `/shortcuts` | Headless CLI & Mobile Shortcuts API | Cloudflare KV (`/api/v1/quick`) | Bearer token & `X-Client-Name` header |
+| `/vault` | Device History & Owner Storage Vault | `localStorage` + Signed HMAC Cookie | Passcode-locked storage monitor & upload toggles |
 
-[![My Skills](https://github.com/SarathAdhi/Online-Clipboard/assets/91727830/50e17f76-77f4-492c-b870-4428afef3e02)]()
-
-</div>
-
-</td><td valign="top" width="33%">
-
-### React
-
-<div align="center">  
- 
-[![My Skills](https://github.com/SarathAdhi/Online-Clipboard/assets/91727830/2b301f52-5811-452a-86cd-60381f7b2018)]()
- 
-</div>
-
-</td></tr></table>
-
-<br />
-
-![image](https://user-images.githubusercontent.com/91727830/221391679-d36dd1cb-15dc-446a-883d-666abb96d6ad.png)
-
-## Save to Clipboard
-
-![image](https://user-images.githubusercontent.com/91727830/221391820-ea2c5251-9240-45ee-93c1-d4d721c1afac.png)
-
-## Retrieve from Clipboard:
-
-![image](https://user-images.githubusercontent.com/91727830/221391840-cfac4a7d-e4f2-4c67-870c-3e8b49587cbd.png)
-
-## Save Editable Text
-
-![image](https://user-images.githubusercontent.com/91727830/221391928-f0c9ade5-1e61-4d1e-b774-82cd330a695c.png)
-
-## Retrieve Editable Text and Edit or Update if needed
-
-### Read Only
-
-![image](https://user-images.githubusercontent.com/91727830/221391975-140c13c4-d5e2-43f7-92c3-de66dd5f44ad.png)
-
-### Update
-
-![image](https://user-images.githubusercontent.com/91727830/221392007-8d98626c-7854-4c86-967e-9f89391ac5ab.png)
-
-# Astro Starter Kit: Minimal
-
-```
-npm create astro@latest -- --template minimal
+```mermaid
+graph TD
+    Client["Browser / Mobile / Shortcuts CLI"] --> Worker["Cloudflare Worker (clipboard.dulith.me)"]
+    Worker --> SSR["Astro 6 SSR Pages & SEO Metadata"]
+    Worker --> API["REST API (/api/v1/*)"]
+    Worker --> DO["Durable Objects (RoomHub WebSockets)"]
+    API --> D1["Cloudflare D1 (Clips, Short URLs, Analytics)"]
+    API --> KV["Cloudflare KV (Quick Sync & Sessions)"]
+    API --> R2["Cloudflare R2 (Images & File Drops)"]
+    Cron["Hourly Scheduled Cron"] --> D1
+    Cron --> R2
 ```
 
-## 🧞 Commands
+## Credits and Enhancements
 
-All commands are run from the root of the project, from a terminal:
+This project is forked from `SarathAdhi/Online-Clipboard` and synthesizes, upgrades, and secures ideas from four open-source clipboard repositories.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:3000`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+| Source Repository | Features Adapted | Upgrades & Enhancements Implemented |
+| :--- | :--- | :--- |
+| [SarathAdhi/Online-Clipboard](https://github.com/SarathAdhi/Online-Clipboard) | Core text/image clipboard by ID, `-e` editable clips, Live Clipboard, Scribble, File Drop, URL Shortener with `+` analytics | Upgraded Astro 2/Vercel/Supabase to Astro 6 + Cloudflare Workers/D1/R2/Durable Objects; replaced client-side plaintext password queries with salted PBKDF2-SHA256; fixed XSS in linkify and UUID collision loop bug; added Liquid Glass UI and SEO |
+| [ling-drag0n/CloudPaste-old](https://github.com/ling-drag0n/CloudPaste-old) | Cloudflare Edge storage model, TTL expiration, max-view burn limits, Markdown preview, QR sharing, multi-file upload progress/cancel, local draft auto-save, TXT/MD/PDF export, admin upload toggles | Replaced monolithic single-file Worker and unsalted SHA-256 with modular Astro API routes, PBKDF2 hashing, optional browser-side AES-256-GCM E2EE, and responsive mobile-first design down to `320px` |
+| [YanxinTang/clipboard-online](https://github.com/YanxinTang/clipboard-online) | Headless `GET`/`POST` clipboard API for Apple Shortcuts, Android HTTP Shortcuts/Tasker, and `X-Client-Name` tracking | Upgraded LAN-only Go desktop server and MD5 auth to global edge `/api/v1/quick` endpoint with Bearer token authentication and interactive setup guide at `/shortcuts` |
+| [a-robert/online-clipboard](https://github.com/a-robert/online-clipboard) | Authenticated personal clipboard workspace route (`/vault`) separated from public quick access | Replaced stubbed client-side auth with HMAC-SHA256 HTTP-only cookie authentication backed by Cloudflare Worker secrets |
 
-## 👀 Want to learn more?
+## Project Structure
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```
+.
+├── assets/
+│   └── logo.png                  # High-resolution transparent PNG brand mark
+├── public/
+│   ├── og-image.png              # 1200x630 Open Graph preview image
+│   ├── manifest.json             # PWA web app manifest
+│   ├── robots.txt                # Search crawler directives
+│   └── favicon.* / icon-*.png    # Multi-size favicons and Apple touch icon
+├── src/
+│   ├── components/               # Interactive React islands and Liquid Glass controls
+│   ├── layouts/PageLayout.astro  # Zero-FOUC theme shell, SEO meta, JSON-LD, optical SVG defs
+│   ├── lib/                      # PBKDF2 crypto, AES-GCM E2EE, sanitize, TTL, UA parser
+│   ├── pages/                    # Dedicated SSR pages and /api/v1/* endpoints
+│   ├── styles/liquid-glass.css   # Tri-state semantic tokens and Liquid Glass primitives
+│   └── worker/                   # Custom Worker entrypoint, Durable Objects RoomHub, D1 schema, cron
+├── tests/                        # Vitest unit tests
+├── astro.config.mjs              # Astro + Cloudflare adapter + Sitemap config
+└── wrangler.jsonc                # Cloudflare Workers, D1, KV, R2, Durable Objects bindings
+```
+
+## Installation
+
+### Prerequisites
+
+- Node.js `>= 22.12.0`
+- Cloudflare account with Workers, D1, KV, and R2 enabled (`wrangler` CLI)
+
+### Setup Steps
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/dulithdivisekara/online-clipboard.git
+cd online-clipboard
+```
+
+2. Install dependencies:
+
+```bash
+npm install --legacy-peer-deps
+```
+
+3. Configure local development secrets (never commit `.dev.vars`):
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+4. Provision and initialize D1 schema locally:
+
+```bash
+npx wrangler d1 execute clipboard-db --local --yes --file=src/worker/schema.sql
+```
+
+## Usage
+
+### Local Development
+
+```bash
+npm run dev
+```
+
+### Cloudflare Production Deployment
+
+1. Create your D1 database, KV namespace, and R2 bucket in Cloudflare and update their IDs and custom `routes` in `wrangler.jsonc`.
+2. Apply remote D1 schema and set production secrets:
+
+```bash
+npx wrangler d1 execute clipboard-db --remote --yes --file=src/worker/schema.sql
+npx wrangler secret put VAULT_PASSCODE
+npx wrangler secret put SESSION_SECRET
+npx wrangler secret put QUICK_API_TOKEN
+```
+
+3. Build and deploy:
+
+```bash
+npm run deploy
+```
+
+### Headless Shortcuts & CLI Example
+
+```bash
+# Save a 1-day text clip publicly
+curl -X POST https://clipboard.dulith.me/api/v1/clips \
+  -H "Content-Type: application/json" \
+  -d '{"content":"Hello from terminal","expiresIn":"1d"}'
+
+# Push to personal quick-sync buffer (requires QUICK_API_TOKEN)
+pbpaste | curl -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "X-Client-Name: MacBook" \
+  --data-binary @- \
+  https://clipboard.dulith.me/api/v1/quick
+```
+
+## Verification Tests
+
+Run the automated unit tests and full Astro/TypeScript production build:
+
+```bash
+npm test
+npm run build
+```
+
+## Session Logging and Inspection
+
+Cloudflare Workers stream stdout/stderr diagnostics at the edge rather than writing persistent local log files. Inspect live HTTP requests, WebSocket room activity, and hourly cron executions with:
+
+```bash
+npx wrangler tail
+```
+
+## Security and Privacy
+
+- Local secret files (`.dev.vars`, `.dev.vars.*`, `.env`, `.env.*`, `*.pem`, `*.key`) and log files (`*.log`) are excluded via `.gitignore`; production credentials (`VAULT_PASSCODE`, `SESSION_SECRET`, `QUICK_API_TOKEN`) are stored as Cloudflare Worker secrets.
+- Clip passwords use salted PBKDF2-SHA256 (100,000 iterations) and are never exposed in client responses.
+- Browser-side Zero-Knowledge E2EE uses AES-256-GCM with the key retained strictly in the URL `#fragment`.
+- See [SECURITY.md](SECURITY.md) for vulnerability reporting instructions.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /vault
+Disallow: /u/
 
-Sitemap: https://www.0cb.tech/sitemap-index.xml
+Sitemap: https://clipboard.dulith.me/sitemap-index.xml

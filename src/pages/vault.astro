@@ -1,0 +1,21 @@
+---
+import PageLayout from "@layouts/PageLayout.astro";
+import VaultDashboard from "@components/VaultDashboard";
+---
+
+<PageLayout
+  title="Personal Vault & History | clipboard.dulith.me"
+  description="View your recent local clips or unlock the protected Owner Storage Vault."
+  canonicalPath="/vault"
+  noIndex={true}
+>
+  <section class="hero">
+    <span class="eyebrow">History &amp; Storage Controls</span>
+    <h1>Personal Vault</h1>
+    <p>
+      Quickly revisit clips created on this browser or sign in with your owner passcode to manage R2 storage and active links.
+    </p>
+  </section>
+
+  <VaultDashboard client:load />
+</PageLayout>

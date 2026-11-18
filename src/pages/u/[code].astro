@@ -1,0 +1,47 @@
+---
+import PageLayout from "@layouts/PageLayout.astro";
+import UrlAnalyticsView from "@components/UrlAnalyticsView";
+import { resolveShortUrlOrStats } from "@lib/url-redirect";
+
+const result = await resolveShortUrlOrStats(
+  Astro.params.code || "",
+  Astro.request,
+  Astro.locals.cfContext
+);
+
+if (result.action === "redirect") {
+  return Astro.redirect(result.targetUrl, 302);
+}
+
+if (result.action === "not_found") {
+  Astro.response.status = 404;
+}
+---
+
+<PageLayout
+  title={result.action === "stats" ? `Analytics /${result.stats.code} | clipboard.dulith.me` : "Link Not Found | clipboard.dulith.me"}
+  description="Shortened URL click telemetry and device breakdown."
+  noIndex={true}
+>
+  {
+    result.action === "stats" ? (
+      <>
+        <section class="hero">
+          <span class="eyebrow">Short Link Analytics</span>
+          <h1>Link Telemetry</h1>
+        </section>
+        <UrlAnalyticsView client:load {...result.stats} />
+      </>
+    ) : (
+      <section class="glass-card sheet" style="text-align:center;">
+        <h1 style="margin:0;font-size:24px;">Short link not found or expired</h1>
+        <p style="color:var(--label-secondary);margin:0;">
+          Double-check the link alias or create a new short URL.
+        </p>
+        <div style="margin-top:8px;">
+          <a href="/url" class="primary-btn">Go to URL Shortener</a>
+        </div>
+      </section>
+    )
+  }
+</PageLayout>

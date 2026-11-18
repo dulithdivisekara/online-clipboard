@@ -1,90 +1,137 @@
 ---
 import PageLayout from "@layouts/PageLayout.astro";
-import { supabase } from "@lib/supabase";
-import IntroSectionHome from "@modules/clipboard/IntroSectionHome.astro";
-import RetrieveSection from "@modules/clipboard/RetrieveSection";
-import AddSection from "@modules/clipboard/AddSection";
+import ClipboardWorkspace from "@components/ClipboardWorkspace";
+import { getEnv, sanitizeClipForClient, type ClipRow } from "@lib/server";
+import { isExpired } from "@lib/ttl";
 
-const {
-  url: { searchParams },
-} = Astro;
+const { searchParams } = Astro.url;
 
-// --- Redirect to Realtime clipboard
-let realtimeCbId = searchParams.get("lc_id");
-
-if (realtimeCbId) {
-  return Astro.redirect(`/live-clipboard?id=${realtimeCbId}`);
+const realtimeId = searchParams.get("lc_id");
+if (realtimeId) {
+  return Astro.redirect(`/live-clipboard?id=${encodeURIComponent(realtimeId)}`);
 }
 
-let cbId = searchParams.get("id") || "";
-let _clipBoardText = "";
-let _clipBoardType = "";
+const cbId = (searchParams.get("id") || "").trim().toLowerCase();
+let initialClip: any = null;
+let initialRequiresPassword = false;
+let initialNeedsReveal = false;
 
 if (cbId) {
-  const isTextEditable = cbId?.split("-")[1]?.toLocaleLowerCase() === "e";
-
-  const { data } = await supabase
-    .from(isTextEditable ? "clipboard-edit" : "clipboard")
-    .select("*")
-    .eq("uuid", cbId);
-
-  if (!isTextEditable) _clipBoardText = data![0]?.text;
-
-  _clipBoardType = data![0]?.type;
+  try {
+    const env = getEnv();
+    const row = await env.CLIPBOARD_DB.prepare("SELECT * FROM clips WHERE id = ?")
+      .bind(cbId)
+      .first<ClipRow>();
+    if (row && !isExpired(row.expires_at) && !(row.max_views > 0 && row.view_count >= row.max_views)) {
+      if (row.password_hash) {
+        initialRequiresPassword = true;
+      } else if (row.max_views > 0) {
+        // Never consume burn-after-read views on SSR/bot prefetch; require explicit reveal click
+        initialNeedsReveal = true;
+      } else if (row.kind === "image" || row.kind === "file") {
+        initialClip = {
+          ...sanitizeClipForClient(row),
+          downloadUrl: `/api/v1/files/${encodeURIComponent(row.id)}`,
+        };
+      } else {
+        initialClip = sanitizeClipForClient(row);
+      }
+    }
+  } catch {
+    // Ignore SSR lookup errors and allow client retry
+  }
 }
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How does Zero-Knowledge End-to-End Encryption work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "When Zero-Knowledge E2EE is enabled, your browser encrypts the text with AES-256-GCM before sending it to Cloudflare. The decryption key stays exclusively in the URL #fragment and is never transmitted to the server.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How do I edit a clip after saving it?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Enable Allow Future Edits (or end your custom ID with -e) and set a password when saving. Only callers with that password can update the clip content.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I sync my clipboard from iPhone Shortcuts or terminal?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. Visit the Shortcuts API page for ready-to-use Apple Shortcuts, Android HTTP Shortcuts, and curl commands powered by /api/v1/quick.",
+      },
+    },
+  ],
+};
 ---
 
-<PageLayout title="Online ClipBoard - Sync Automatically in Realtime">
-  <IntroSectionHome />
+<PageLayout
+  title={cbId ? `Clip ${cbId} — Clipboard | clipboard.dulith.me` : "Online Clipboard — Instant Text, File Drop & Live Sync | clipboard.dulith.me"}
+  description="Transfer text, Markdown, code, images, and files across devices in seconds with optional AES-256-GCM encryption, burn-after-read limits, and real-time WebSocket rooms."
+  canonicalPath="/"
+  noIndex={Boolean(cbId)}
+  structuredData={faqSchema}
+>
+  <section class="hero">
+    <span class="eyebrow">clipboard.dulith.me</span>
+    <h1>Instant Cross-Device Clipboard</h1>
+    <p>
+      Save and retrieve text, Markdown, syntax-highlighted code, or images across phones and computers with optional zero-knowledge encryption and burn-after-read links.
+    </p>
+  </section>
 
-  <AddSection client:load />
-
-  <RetrieveSection
+  <ClipboardWorkspace
     client:load
-    _clipBoardUuid={cbId}
-    _clipBoardText={_clipBoardText}
-    _clipBoardType={_clipBoardType}
+    initialId={cbId}
+    initialClip={initialClip}
+    initialRequiresPassword={initialRequiresPassword}
+    initialNeedsReveal={initialNeedsReveal}
   />
 
-  <div class="card grid gap-4">
-    <h2 class="underline">About Online Clipboard:</h2>
+  <section class="glass-card grouped-list" aria-label="Frequently Asked Questions">
+    <details>
+      <summary>
+        <span>How does Zero-Knowledge End-to-End Encryption work?</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"></path>
+        </svg>
+      </summary>
+      <div class="grouped-body">
+        Enabling Zero-Knowledge E2EE encrypts your text inside the browser using Web Crypto AES-256-GCM before uploading. The secret key is appended after the URL <code>#key=</code> hash, which browsers never send in HTTP requests.
+      </div>
+    </details>
 
-    <p class="-mt-2">
-      {
-        `The clipboard, a crucial software feature typically integrated into
-      operating systems, facilitates seamless data transfer through copy and
-      paste functions, enabling temporary storage and efficient exchange of
-      information between files and applications. Widely utilized in graphical
-      user interface (GUI) environments, the clipboard operates as a transient
-      data buffer accessible to various programs via a universal programming
-      interface. Commonly accessed through user-friendly interfaces, including
-      hotkeys and menu options, clipboard operations enhance user experience
-      across diverse applications.`
-      }
-    </p>
+    <details>
+      <summary>
+        <span>How do Burn-After-Read and Expiration TTLs work?</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"></path>
+        </svg>
+      </summary>
+      <div class="grouped-body">
+        Every clip supports automatic expiration (1 hour, 1 day, 7 days, 30 days, or never) plus an optional view limit. Once the view limit is reached or TTL expires, the clip and any attached R2 file are permanently purged.
+      </div>
+    </details>
 
-    <p>
-      {
-        "Enhance Your Productivity Across Multiple Devices with Our Innovative Online Clipboard Tool!"
-      }
-    </p>
-
-    <p>
-      {
-        "In today's dynamic work environment, people often switch between multiple devices, making it challenging to seamlessly transfer short texts or images. Traditional methods like emails or complex software can be overkill for quick sharing. That's where our unique tool comes in."
-      }
-    </p>
-
-    <p>
-      {
-        "Clipboard implementations vary across operating systems and versions, complicating the sharing process. Moreover, most environments only support a single clipboard operation, overwriting previous content with each cut or copy. The paste operation typically duplicates the content, keeping it in the clipboard for future use."
-      }
-    </p>
-
-    <p>
-      {
-        "Initially designed to store plain text, early clipboard implementations lacked meta-information like font, style, and color. Our Online Clipboard, while currently supporting plain text and images, is committed to expanding its features in the future. Stay tuned for more enhancements to elevate your cross-device workflow!"
-      }
-    </p>
-  </div>
+    <details>
+      <summary>
+        <span>How do editable clips (-e) and passwords work?</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18l6-6-6-6"></path>
+        </svg>
+      </summary>
+      <div class="grouped-body">
+        Turn on <strong>Allow Future Edits</strong> or suffix your custom ID with <code>-e</code>. Passwords are hashed server-side with salted PBKDF2-SHA256 (100,000 iterations) and are never returned to clients.
+      </div>
+    </details>
+  </section>
 </PageLayout>

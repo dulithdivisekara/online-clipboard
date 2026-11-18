@@ -1,25 +1,27 @@
 ---
 import PageLayout from "@layouts/PageLayout.astro";
-import ScribbleBoard from "@modules/scribble";
-import IntroSectionScribble from "@modules/scribble/IntroSectionScribble.astro";
-import { uuid as funcUuid } from "@utils/uuid";
+import ScribbleBoard from "@components/ScribbleBoard";
+import { generateShortId } from "@lib/crypto";
 
-const { url } = Astro;
-
-const id = url.searchParams.get("id");
-
-const uuid = id || funcUuid();
-
-if (!id) {
-  return Astro.redirect(`/scribble?id=${uuid}`);
-}
+const requestedId = (Astro.url.searchParams.get("id") || "").trim().toLowerCase();
+const roomId = /^[a-z0-9-_]{2,64}$/i.test(requestedId)
+  ? requestedId
+  : generateShortId(6, "alnum");
 ---
 
 <PageLayout
-  title="Live Scribble | 0cb"
-  description="Live Scribble is a free online whiteboard that allows you to collaborate with others in real time. It is a canvas that can be used for brainstorming, tutoring, designing, and more."
+  title="Collaborative Scribble — Live Whiteboard | clipboard.dulith.me"
+  description="Draw, sketch diagrams, and collaborate live across phones, tablets, and desktops with instant PNG export and QR room sharing."
+  canonicalPath="/scribble"
+  noIndex={Boolean(requestedId)}
 >
-  <ScribbleBoard client:load uuid={uuid} />
+  <section class="hero">
+    <span class="eyebrow">Multi-User Canvas</span>
+    <h1>Collaborative Scribble</h1>
+    <p>
+      Sketch ideas together in real time across touchscreens and desktops, then export as a crisp PNG.
+    </p>
+  </section>
 
-  <IntroSectionScribble />
+  <ScribbleBoard client:load roomId={roomId} />
 </PageLayout>

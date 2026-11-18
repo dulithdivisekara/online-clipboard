@@ -1,26 +1,27 @@
 ---
 import PageLayout from "@layouts/PageLayout.astro";
-import RealtimeCb from "@modules/Realtime";
-import IntroSectionRT from "@modules/Realtime/IntroSectionRT.astro";
+import LiveClipboardRoom from "@components/LiveClipboardRoom";
+import { generateShortId } from "@lib/crypto";
 
-import { uuid as funcUuid } from "@utils/uuid";
-
-const { url } = Astro;
-
-const id = url.searchParams.get("id");
-
-const uuid = id || funcUuid();
-
-if (!id) {
-  return Astro.redirect(`/live-clipboard?id=${uuid}`);
-}
+const requestedId = (Astro.url.searchParams.get("id") || "").trim().toLowerCase();
+const roomId = /^[a-z0-9-_]{2,64}$/i.test(requestedId)
+  ? requestedId
+  : generateShortId(6, "alnum");
 ---
 
 <PageLayout
-  title="Live ClipBoard - Sync Automatically in Realtime"
-  description="Clipboard to share text between computers very easy. This tool sync clipboard in realtime."
+  title="Live Sync Clipboard — Real-Time Cross-Device Room | clipboard.dulith.me"
+  description="Collaborate and sync clipboard text, Markdown, and screenshots in real time across devices using low-latency Cloudflare Durable Objects WebSockets."
+  canonicalPath="/live-clipboard"
+  noIndex={Boolean(requestedId)}
 >
-  <RealtimeCb client:load uuid={uuid} />
+  <section class="hero">
+    <span class="eyebrow">Real-Time WebSocket Sync</span>
+    <h1>Live Sync Clipboard</h1>
+    <p>
+      Every keystroke and screenshot syncs instantaneously across all connected devices in the room.
+    </p>
+  </section>
 
-  <IntroSectionRT />
+  <LiveClipboardRoom client:load roomId={roomId} />
 </PageLayout>

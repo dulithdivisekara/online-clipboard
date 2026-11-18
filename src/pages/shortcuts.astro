@@ -1,0 +1,78 @@
+---
+import PageLayout from "@layouts/PageLayout.astro";
+---
+
+<PageLayout
+  title="Shortcuts, Mobile & CLI API | clipboard.dulith.me"
+  description="Sync your clipboard directly from iPhone Apple Shortcuts, macOS, Android HTTP Shortcuts, Tasker, or terminal curl commands using the clipboard.dulith.me REST API."
+  canonicalPath="/shortcuts"
+>
+  <section class="hero">
+    <span class="eyebrow">Headless Device Sync</span>
+    <h1>Shortcuts &amp; CLI API</h1>
+    <p>
+      Push or pull clipboard text straight from iOS Share Sheet, Android Tasker, or your terminal without opening a browser tab.
+    </p>
+  </section>
+
+  <section class="glass-card sheet">
+    <div class="step-head">
+      <h2>1. Public Clip API (No Auth Required)</h2>
+      <span class="badge-pill ok">Open Endpoints</span>
+    </div>
+
+    <div class="well">
+      <div style="font-weight:620;margin-bottom:6px;">Save text from terminal</div>
+      <pre style="margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:13px;"><code>curl -X POST https://clipboard.dulith.me/api/v1/clips \
+  -H "Content-Type: application/json" \
+  -d '&#123;"content":"Hello from terminal","expiresIn":"1d"&#125;'</code></pre>
+    </div>
+
+    <div class="well">
+      <div style="font-weight:620;margin-bottom:6px;">Fetch a clip or download a file</div>
+      <pre style="margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:13px;"><code># Read text clip
+curl https://clipboard.dulith.me/api/v1/clips/CLIP_ID
+
+# Download password-protected file
+curl -H "X-Password: YOUR_PASSWORD" -OJ https://clipboard.dulith.me/api/v1/files/FILE_ID?download=1</code></pre>
+    </div>
+  </section>
+
+  <section class="glass-card sheet">
+    <div class="step-head">
+      <h2>2. Personal Quick Sync (Apple Shortcuts &amp; Android)</h2>
+      <span class="badge-pill accent">Bearer Token</span>
+    </div>
+
+    <p style="margin:0;color:var(--label-secondary);font-size:15px;">
+      Inspired by <code>YanxinTang/clipboard-online</code>, the <code>/api/v1/quick</code> endpoint stores your latest cross-device clipboard buffer in Cloudflare KV using your Worker <code>QUICK_API_TOKEN</code> secret.
+    </p>
+
+    <div class="field-grid">
+      <div class="well">
+        <h3 style="margin:0 0 8px;font-size:16px;">Apple Shortcuts (iOS / macOS)</h3>
+        <ol style="margin:0;padding-left:18px;color:var(--label-secondary);font-size:14px;line-height:1.7;">
+          <li>Create a Shortcut named <strong>Send to Clipboard</strong>.</li>
+          <li>Add <strong>Get Clipboard</strong> &rarr; <strong>Get Contents of URL</strong>.</li>
+          <li>URL: <code>https://clipboard.dulith.me/api/v1/quick</code>, Method: <code>POST</code>.</li>
+          <li>Header: <code>Authorization: Bearer YOUR_TOKEN</code> and <code>X-Client-Name: iPhone</code>.</li>
+          <li>Request Body: JSON key <code>data</code> set to Clipboard.</li>
+        </ol>
+      </div>
+
+      <div class="well">
+        <h3 style="margin:0 0 8px;font-size:16px;">Pull Latest to Device</h3>
+        <pre style="margin:0;overflow-x:auto;font-family:var(--font-mono);font-size:13px;"><code># Pull latest quick clipboard
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  https://clipboard.dulith.me/api/v1/quick
+
+# Push current macOS clipboard
+pbpaste | curl -X POST \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "X-Client-Name: MacBook" \
+  --data-binary @- \
+  https://clipboard.dulith.me/api/v1/quick</code></pre>
+      </div>
+    </div>
+  </section>
+</PageLayout>

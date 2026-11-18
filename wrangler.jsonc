@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "online-clipboard",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "clipboard.dulith.me",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "CLIPBOARD_DB",
+      "database_name": "clipboard-db",
+      "database_id": "705b1b89-e2ed-4fa5-b9e6-6cc281dbba67"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "CLIPBOARD_KV",
+      "id": "f320b513c32244598a603f920fae3133"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CLIPBOARD_FILES",
+      "bucket_name": "clipboard-files"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ROOM_HUB",
+        "class_name": "RoomHub"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RoomHub"]
+    }
+  ],
+  "triggers": {
+    "crons": ["0 * * * *"]
+  }
+}

@@ -1,123 +1,62 @@
 ---
 import PageLayout from "@layouts/PageLayout.astro";
-import { supabase } from "@lib/supabase";
-import UrlStats from "@modules/Url/UrlStats";
-import DeviceDetector from "device-detector-js";
-import moment from "moment";
+import UrlAnalyticsView from "@components/UrlAnalyticsView";
+import { resolveShortUrlOrStats } from "@lib/url-redirect";
+import { getEnv } from "@lib/server";
 
-const userAgent = Astro.request.headers.get("user-agent");
-const deviceDetector = new DeviceDetector();
-const { client, device, os } = deviceDetector.parse(userAgent!);
+const param = Astro.params.url_name || "";
 
-let urlDetails: Url;
-
-const { url_name } = Astro.params;
-
-const { data } = await supabase
-  .from("url-minifier")
-  .select("*")
-  .eq("name", url_name?.includes("+") ? url_name.slice(0, -1) : url_name);
-
-const _data = data as Url[];
-
-urlDetails = _data[0];
-
-if (urlDetails && !url_name?.includes("+")) {
-  console.log("REDIRECT");
-
-  await supabase
-    .from("url-minifier")
-    .update({
-      stats: [
-        ...urlDetails.stats,
-        {
-          browser: client?.name,
-          type: device?.type,
-          os: os?.name,
-          visitedAt: new Date(),
-        },
-      ],
-    })
-    .eq("name", url_name);
-
-  return Astro.redirect(urlDetails?.url);
+// Never query D1 for dotted asset paths; serve static asset fallback if present
+if (param.includes(".")) {
+  const env = getEnv() as App.Env & { ASSETS?: Fetcher };
+  if (env.ASSETS) {
+    const assetRes = await env.ASSETS.fetch(Astro.request);
+    if (assetRes.status !== 404) {
+      return assetRes;
+    }
+  }
+  return new Response("Not Found", { status: 404 });
 }
 
-let browserLabel = new Map();
-let typeLabel = new Map();
-let osLabel = new Map();
-let visitsCount = new Map();
+const result = await resolveShortUrlOrStats(
+  param,
+  Astro.request,
+  Astro.locals.cfContext
+);
 
-urlDetails?.stats.map((e) => {
-  browserLabel.set(e.browser, (browserLabel.get(e.browser) || 0) + 1);
+if (result.action === "redirect") {
+  return Astro.redirect(result.targetUrl, 302);
+}
 
-  typeLabel.set(e.type, (typeLabel.get(e.type) || 0) + 1);
-
-  osLabel.set(e.os, (osLabel.get(e.os) || 0) + 1);
-
-  const month = moment(e.visitedAt).format("MMMM");
-  visitsCount.set(month, (visitsCount.get(month) || 0) + 1);
-});
-
-const visitsChartData = {
-  labels: [...visitsCount.keys()],
-  datasets: [
-    {
-      label: "Visits per month",
-      backgroundColor: ["#41B883", "#E46651", "#00D8FF", "#DD1B16"],
-      data: [...visitsCount.values()],
-    },
-  ],
-};
-
-const browserData = {
-  labels: [...browserLabel.keys()],
-  datasets: [
-    {
-      label: "Browser",
-      backgroundColor: ["#41B883", "#E46651", "#00D8FF", "#DD1B16"],
-      data: [...browserLabel.values()],
-    },
-  ],
-};
-
-const osData = {
-  labels: [...osLabel.keys()],
-  datasets: [
-    {
-      label: "Operating system",
-      backgroundColor: ["#41B883", "#E46651", "#00D8FF", "#DD1B16"],
-      data: [...osLabel.values()],
-    },
-  ],
-};
-
-const typeData = {
-  labels: [...typeLabel.keys()],
-  datasets: [
-    {
-      label: "PC type",
-      backgroundColor: ["#41B883", "#E46651", "#00D8FF", "#DD1B16"],
-      data: [...typeLabel.values()],
-    },
-  ],
-};
-
-const chartsData = [visitsChartData, browserData, osData, typeData];
+if (result.action === "not_found") {
+  Astro.response.status = 404;
+}
 ---
 
-<PageLayout title="Stats | 0cb">
+<PageLayout
+  title={result.action === "stats" ? `Analytics /${result.stats.code} | clipboard.dulith.me` : "Page Not Found | clipboard.dulith.me"}
+  description="Shortened URL analytics and redirect."
+  noIndex={true}
+>
   {
-    !urlDetails && (
-      <div class="card space-y-4">
-        <h1 class="text-center">URL not exist</h1>
-      </div>
-    )
-  }
-
-  {
-    urlDetails && (
-      <UrlStats barCharts={chartsData} pieCharts={chartsData} client:only />
+    result.action === "stats" ? (
+      <>
+        <section class="hero">
+          <span class="eyebrow">Short Link Analytics</span>
+          <h1>Link Telemetry</h1>
+        </section>
+        <UrlAnalyticsView client:load {...result.stats} />
+      </>
+    ) : (
+      <section class="glass-card sheet" style="text-align:center;">
+        <h1 style="margin:0;font-size:24px;">Page or short link not found</h1>
+        <p style="color:var(--label-secondary);margin:0;">
+          The requested page or short link does not exist or has expired.
+        </p>
+        <div style="margin-top:8px;">
+          <a href="/" class="primary-btn">Back to Clipboard</a>
+        </div>
+      </section>
     )
   }
 </PageLayout>

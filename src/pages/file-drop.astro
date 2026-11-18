@@ -1,19 +1,27 @@
 ---
 import PageLayout from "@layouts/PageLayout.astro";
-import FileDropForm from "@modules/FileDrop";
-import { uuid as funcUuid } from "@utils/uuid";
+import FileDropZone from "@components/FileDropZone";
+import { generateShortId } from "@lib/crypto";
 
-const { url } = Astro;
-
-const id = url.searchParams.get("id");
-
-const uuid = id || funcUuid();
-
-if (!id) {
-  return Astro.redirect(`/file-drop?id=${uuid}`);
-}
+const requestedId = (Astro.url.searchParams.get("id") || "").trim().toLowerCase();
+const roomId = /^[a-z0-9-_]{2,64}$/i.test(requestedId)
+  ? requestedId
+  : generateShortId(6, "alnum");
 ---
 
-<PageLayout>
-  <FileDropForm client:load uuid={uuid} />
+<PageLayout
+  title="File Drop — Encrypted Edge File Sharing | clipboard.dulith.me"
+  description="Send files up to 98 MB across devices with drag-and-drop progress, download limits, password protection, QR codes, and live room alerts."
+  canonicalPath="/file-drop"
+  noIndex={Boolean(requestedId)}
+>
+  <section class="hero">
+    <span class="eyebrow">Cloudflare R2 Edge Transfer</span>
+    <h1>Instant File Drop</h1>
+    <p>
+      Drag and drop files up to 98 MB, set download limits or a password, and receive them live on paired devices.
+    </p>
+  </section>
+
+  <FileDropZone client:load roomId={roomId} />
 </PageLayout>

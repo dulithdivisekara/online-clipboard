@@ -1,30 +1,51 @@
 {
-  "name": "Online Clipboard",
-  "short_name": "0cb",
-  "start_url": ".",
+  "name": "Clipboard — dulith.me",
+  "short_name": "Clipboard",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f2f5f9",
-  "description": "0CB is a free online tool that helps you to Copy and Retrieve Text and Images between any devices. Just copy the text or image and share the ID.",
+  "background_color": "#090a10",
+  "theme_color": "#0066d6",
+  "description": "Instant cross-device clipboard, real-time live sync, collaborative scribble, file drop, and URL analytics at clipboard.dulith.me.",
   "icons": [
     {
-      "src": "./icon-32.png",
+      "src": "/icon-32.png",
       "sizes": "32x32",
       "type": "image/png"
     },
     {
-      "src": "./icon-48.png",
+      "src": "/icon-48.png",
       "sizes": "48x48",
       "type": "image/png"
     },
     {
-      "src": "./icon-64.jpg",
-      "sizes": "64x64",
+      "src": "/icon-72.png",
+      "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "./icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

@@ -1,93 +1,337 @@
 ---
-import { cn } from "@utils/cn";
-import "@styles/global.css";
-import ReactToast from "@components/ReactToast";
-import { keywords } from "../../package.json";
-import { theme } from "@utils/store";
-import { Analytics } from "@vercel/analytics/react";
-import Navbar from "@components/Navbar.astro";
-// Supports weights 100-900
-import "@fontsource-variable/inter";
+import "@styles/liquid-glass.css";
+import { NAV_PAGES } from "@components/nav-pages";
+
+export interface Props {
+  title?: string;
+  description?: string;
+  canonicalPath?: string;
+  noIndex?: boolean;
+  structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
+}
 
 const {
-  title,
-  className,
-  description = "0CB is a free online tool that helps you to copy and retrieve text and images between any devices. Just copy the text or image and share the ID. Now it supports Realtime clipboard and scribble too.",
+  title = "Clipboard — Instant Text, File Drop & Live Sync | clipboard.dulith.me",
+  description = "Free, fast online clipboard with optional end-to-end encryption, burn-after-read, Markdown preview, real-time WebSocket sync, collaborative scribble, file sharing, and URL analytics.",
+  canonicalPath = Astro.url.pathname,
+  noIndex = false,
+  structuredData,
 } = Astro.props;
 
-const myTheme = Astro.cookies.get("theme").value || "dark";
-theme.set(myTheme);
+const siteOrigin = "https://clipboard.dulith.me";
+const canonicalUrl = `${siteOrigin}${canonicalPath === "/" ? "/" : canonicalPath.replace(/\/+$/, "")}`;
+const ogImage = `${siteOrigin}/og-image.png?v=2`;
+const pathname = Astro.url.pathname;
+
+const defaultAppSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Clipboard by dulith.me",
+  url: siteOrigin,
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Any",
+  browserRequirements: "Requires JavaScript",
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+  },
+  description,
+  featureList: [
+    "Cross-device text, Markdown, code, and image clipboard",
+    "Browser-side AES-256-GCM zero-knowledge encryption",
+    "Burn-after-read and custom TTL expiration",
+    "Real-time WebSocket live clipboard and collaborative scribble",
+    "Encrypted file drop up to 98 MB",
+    "URL shortener with browser, OS, and device analytics",
+    "Apple Shortcuts, Android HTTP Shortcuts, and curl REST API",
+  ],
+};
+
+const jsonLdPayload = structuredData
+  ? Array.isArray(structuredData)
+    ? [defaultAppSchema, ...structuredData]
+    : [defaultAppSchema, structuredData]
+  : [defaultAppSchema];
 ---
 
-<html lang="en" id="html-element" class={theme.value}>
+<!DOCTYPE html>
+<html lang="en">
   <head>
-    <title>{title}</title>
-
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" href="/favicon.ico" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="sitemap" href="/sitemap-index.xml" />
-
-    <meta name="theme-color" content="#212121" />
-    <meta charset="utf-8" />
-
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-
-    <meta name="description" content={description} />
-
-    <meta
-      name="keywords"
-      content={keywords.join(", ") +
-        ", Online Clipboard, Free Online Clipboard, Online Clipboard (Sync Automatically in Realtime), 0cb, live clipboard"}
-    />
-
-    <!-- Old -->
-    <!-- <meta
-      name="google-site-verification"
-      content="yEMc_cA98BPS3jVS06ctOQF5NZiKOfCjnt5Wa8-OgeY"
-    /> -->
-
-    <meta
-      name="google-site-verification"
-      content="WktRMnuQpbrSHf_4e4jnomLNRgJhchMYsVaJPNMNYuk"
-    />
-    <script
-      async
-      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3686965845963720"
-      crossorigin="anonymous"
-    ></script>
-
-    <meta name="generator" content={Astro.generator} />
-
-    <script>
-      import "../script/router.ts";
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta id="themeColorMeta" name="theme-color" content="#f2f4f8" />
+    <script is:inline>
+      (function () {
+        try {
+          var t = localStorage.getItem("cb-theme") || "auto";
+          var d =
+            t === "dark" ||
+            (t === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (t === "light" || t === "dark") {
+            document.documentElement.setAttribute("data-theme", t);
+          }
+          var m = document.getElementById("themeColorMeta");
+          if (m) m.setAttribute("content", d ? "#090a10" : "#f2f4f8");
+        } catch (e) {}
+      })();
     </script>
 
-    <style is:global>
-      html {
-        font-family: "Inter Variable", sans-serif !important;
-      }
-    </style>
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta
+      name="keywords"
+      content="online clipboard, free online clipboard, clipboard online, encrypted pastebin, live clipboard, collaborative whiteboard, file drop, url shortener, apple shortcuts clipboard, clipboard.dulith.me"
+    />
+    <meta name="robots" content={noIndex ? "noindex, nofollow" : "index, follow"} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Icons & PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link id="faviconLink" rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="clipboard.dulith.me" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="clipboard.dulith.me Liquid Glass workspace preview" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    {
+      jsonLdPayload.map((schema) => (
+        <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+      ))
+    }
   </head>
 
-  <body
-    class="min-h-screen dark:bg-black bg-slate-100 flex flex-col items-center"
-  >
-    <Navbar {...{ theme }} />
+  <body>
+    <!-- Offscreen Snell's Law Liquid Glass Optical Filters -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="lg-liquid-lens" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="soft" />
+          <feImage id="lgBarDispImg" x="0" y="0" width="600" height="52" preserveAspectRatio="none" result="bar_disp" />
+          <feDisplacementMap in="soft" in2="bar_disp" scale="8" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
 
-    <main
-      class={cn(
-        "flex-1 h-full w-full max-w-[1280px] p-2 sm:p-4 flex flex-col gap-2 sm:gap-4",
-        className
-      )}
-    >
-      <slot />
-    </main>
+        <filter id="lg-thumb-lens" x="-28%" y="-56%" width="156%" height="212%" color-interpolation-filters="sRGB">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="blurred_source" />
+          <feImage id="lgDispImg" x="0" y="0" width="120" height="40" preserveAspectRatio="none" result="displacement_map" />
+          <feDisplacementMap id="lgDispMap" in="blurred_source" in2="displacement_map" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced" />
+          <feColorMatrix in="displaced" type="saturate" values="5.5" result="displaced_saturated" />
+          <feImage id="lgSpecImg" x="0" y="0" width="120" height="40" preserveAspectRatio="none" result="specular_layer" />
+          <feComposite in="displaced_saturated" in2="specular_layer" operator="in" result="specular_saturated" />
+          <feComponentTransfer in="specular_layer" result="specular_faded">
+            <feFuncA id="lgSpecAlpha" type="linear" slope="0.44" />
+          </feComponentTransfer>
+          <feBlend in="specular_saturated" in2="displaced" mode="normal" result="withSaturation" />
+          <feBlend in="specular_faded" in2="withSaturation" mode="normal" />
+        </filter>
+      </defs>
+    </svg>
 
-    <ReactToast client:load />
-    <Analytics client:only />
+    <!-- Layer 1: Ambient Color Field -->
+    <div class="ambient-field" aria-hidden="true">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="shell">
+      <!-- Layer 2: Floating Pill Navbar -->
+      <header class="top-bar liquid-glass refract-rim">
+        <a href="/" class="brand" aria-label="Clipboard Home">
+          <span class="brand-icon">
+            <img src="/favicon.png" alt="" width="28" height="28" />
+          </span>
+          <span>Clipboard</span>
+        </a>
+
+        <nav class="nav-links-desktop" aria-label="Primary navigation">
+          {
+            NAV_PAGES.map((p) => {
+              const active = p.href === "/" ? pathname === "/" : pathname.startsWith(p.href);
+              return (
+                <a
+                  href={p.href}
+                  class={`nav-link ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {p.shortName}
+                </a>
+              );
+            })
+          }
+        </nav>
+
+        <div class="nav-actions">
+          <button
+            id="themeToggleBtn"
+            type="button"
+            class="theme-toggle"
+            aria-label="Switch appearance theme (Auto, Light, Dark)"
+            title="Theme: Auto / Light / Dark"
+          >
+            <svg class="theme-ico theme-ico-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <path d="M8 21h8M12 17v4"></path>
+            </svg>
+            <svg class="theme-ico theme-ico-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+            </svg>
+            <svg class="theme-ico theme-ico-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span id="themeLabel" class="theme-label">Auto</span>
+          </button>
+
+          <button
+            id="mobileMenuBtn"
+            type="button"
+            class="mobile-menu-btn"
+            aria-label="Open navigation menu"
+            aria-expanded="false"
+            aria-controls="mobileNavPopover"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16"></path>
+            </svg>
+            <span>Menu</span>
+          </button>
+        </div>
+      </header>
+
+      <nav id="mobileNavPopover" class="mobile-nav-popover liquid-glass" aria-label="Mobile navigation">
+        {
+          NAV_PAGES.map((p) => {
+            const active = p.href === "/" ? pathname === "/" : pathname.startsWith(p.href);
+            return (
+              <a
+                href={p.href}
+                class={`mobile-nav-item ${active ? "active" : ""}`}
+                aria-current={active ? "page" : undefined}
+              >
+                <span>{p.name}</span>
+                {active && <span aria-hidden="true">Active</span>}
+              </a>
+            );
+          })
+        }
+      </nav>
+
+      <main style="display:flex;flex-direction:column;gap:20px;">
+        <slot />
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-links">
+          <a href="/">Clipboard</a>
+          <a href="/live-clipboard">Live Sync</a>
+          <a href="/scribble">Scribble</a>
+          <a href="/file-drop">File Drop</a>
+          <a href="/url">URL Shortener</a>
+          <a href="/shortcuts">Shortcuts API</a>
+          <a href="/vault">Vault</a>
+          <a href="https://github.com/dulithdivisekara/online-clipboard" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;">
+          <span class="version-pill">v2.0 · clipboard.dulith.me</span>
+          <span>Zero-knowledge E2EE optional · Cloudflare Edge</span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Floating Toast -->
+    <div id="globalToast" class="toast liquid-glass" role="status" aria-live="polite"></div>
+
+    <script>
+      import { initLiquidOptics } from "@lib/liquid-optics";
+
+      const THEME_ORDER = ["auto", "light", "dark"] as const;
+      type ThemeMode = (typeof THEME_ORDER)[number];
+
+      function syncThemeUi(mode: ThemeMode) {
+        const label = document.getElementById("themeLabel");
+        if (label) {
+          label.textContent = mode === "auto" ? "Auto" : mode === "light" ? "Light" : "Dark";
+        }
+        const dark =
+          mode === "dark" ||
+          (mode === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const meta = document.getElementById("themeColorMeta");
+        if (meta) meta.setAttribute("content", dark ? "#090a10" : "#f2f4f8");
+      }
+
+      const initialTheme = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
+      syncThemeUi(THEME_ORDER.includes(initialTheme) ? initialTheme : "auto");
+
+      const themeBtn = document.getElementById("themeToggleBtn");
+      themeBtn?.addEventListener("click", () => {
+        const current = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
+        const next = THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length];
+
+        document.documentElement.classList.add("theme-transitioning");
+        window.setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 260);
+
+        if (next === "auto") {
+          document.documentElement.removeAttribute("data-theme");
+          localStorage.removeItem("cb-theme");
+        } else {
+          document.documentElement.setAttribute("data-theme", next);
+          localStorage.setItem("cb-theme", next);
+        }
+        syncThemeUi(next);
+      });
+
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+        const current = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
+        if (current === "auto") syncThemeUi("auto");
+      });
+
+      // Mobile nav popover
+      const menuBtn = document.getElementById("mobileMenuBtn");
+      const popover = document.getElementById("mobileNavPopover");
+      menuBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = popover?.classList.toggle("open");
+        menuBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      });
+      document.addEventListener("click", (e) => {
+        if (popover?.classList.contains("open") && !popover.contains(e.target as Node)) {
+          popover.classList.remove("open");
+          menuBtn?.setAttribute("aria-expanded", "false");
+        }
+      });
+
+      // Global toast bus
+      let toastTimer: number | undefined;
+      window.addEventListener("cb:toast", (ev: Event) => {
+        const detail = (ev as CustomEvent<{ message: string; kind?: string }>).detail;
+        const toast = document.getElementById("globalToast");
+        if (!toast || !detail?.message) return;
+        toast.textContent = detail.message;
+        toast.className = `toast liquid-glass visible ${detail.kind === "err" ? "err" : "ok"}`;
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => {
+          toast.classList.remove("visible");
+        }, 2600);
+      });
+
+      initLiquidOptics();
+    </script>
   </body>
 </html>

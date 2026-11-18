@@ -1,28 +1,33 @@
 import { defineConfig } from "astro/config";
-import tailwind from "@astrojs/tailwind";
+import cloudflare from "@astrojs/cloudflare";
 import react from "@astrojs/react";
-import vercel from "@astrojs/vercel/serverless";
-import compress from "astro-compress";
 import sitemap from "@astrojs/sitemap";
 
-// https://astro.build/config
 export default defineConfig({
+  site: "https://clipboard.dulith.me",
   output: "server",
-  adapter: vercel(),
-  site: "https://www.0cb.tech",
-  prefetch: true,
+  adapter: cloudflare({
+    imageService: "passthrough",
+    sessionKVBindingName: "CLIPBOARD_KV",
+  }),
   integrations: [
-    tailwind({
-      config: {
-        applyBaseStyles: false,
-      },
-    }),
     react(),
     sitemap({
+      customPages: [
+        "https://clipboard.dulith.me/",
+        "https://clipboard.dulith.me/live-clipboard",
+        "https://clipboard.dulith.me/scribble",
+        "https://clipboard.dulith.me/file-drop",
+        "https://clipboard.dulith.me/url",
+        "https://clipboard.dulith.me/shortcuts",
+      ],
+      filter: (page) =>
+        !page.includes("/vault") &&
+        !page.includes("/api/") &&
+        !page.includes("/u/"),
       changefreq: "weekly",
       priority: 0.8,
       lastmod: new Date(),
     }),
-    compress(),
   ],
 });
