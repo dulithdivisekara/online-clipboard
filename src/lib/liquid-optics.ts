@@ -164,50 +164,155 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
   const NAV_BUBBLE_KEY = "cb-nav-bubble";
   const activeLink = nav.querySelector<HTMLAnchorElement>(".nav-link.active") || links[0];
   const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dispImg = document.getElementById("lgDispImg");
+  const specImg = document.getElementById("lgSpecImg");
+  const dispMap = document.getElementById("lgDispMap");
+  const specAlpha = document.getElementById("lgSpecAlpha");
 
-  const setBubbleBox = (x: number, width: number, swell = false, animate = true) => {
-    if (!animate || reducedMotion()) {
-      bubble.style.transition = "none";
-    } else {
-      bubble.style.transition = "";
-    }
-    bubble.style.width = `${width}px`;
-    bubble.style.transform = `translate3d(${x}px, 0, 0)${swell ? " scale(1.03, 0.96)" : ""}`;
-    bubble.style.opacity = "1";
-  };
-
-  const snapToLink = (link: HTMLElement, swell = false, animate = true) => {
-    setBubbleBox(link.offsetLeft, link.offsetWidth, swell, animate);
-  };
-
-  // Seamless cross-page spring entry from the previously clicked pill if available
-  let restoredPrev = false;
-  try {
-    const raw = sessionStorage.getItem(NAV_BUBBLE_KEY);
-    if (raw) {
-      sessionStorage.removeItem(NAV_BUBBLE_KEY);
-      const prev = JSON.parse(raw) as { x?: number; w?: number };
-      if (typeof prev.x === "number" && typeof prev.w === "number" && prev.w > 0) {
-        restoredPrev = true;
-        setBubbleBox(prev.x, prev.w, false, false);
-        void bubble.offsetWidth;
-        requestAnimationFrame(() => snapToLink(activeLink, false, true));
-      }
-    }
-  } catch {
-    // ignore storage failures
-  }
-
-  if (!restoredPrev) {
-    snapToLink(activeLink, false, false);
-    requestAnimationFrame(() => {
-      bubble.style.transition = "";
-    });
-  }
-
+  let curX = activeLink.offsetLeft;
+  let curW = activeLink.offsetWidth;
+  let targetX = curX;
+  let targetW = curW;
+  let velX = 0;
+  let velW = 0;
+  let scaleX = 1;
+  let scaleY = 1;
+  let scaleVelX = 0;
+  let scaleVelY = 0;
   let pointerDown = false;
   let dragging = false;
+  let suppressClick = false;
   let downX = 0;
+  let holdTimer: number | null = null;
+  let rafId = 0;
+
+  bubble.style.transition = "none";
+
+  const syncLensMaps = (w: number, h: number) => {
+    if (!dispImg || !specImg || w <= 0 || h <= 0) return;
+    dispImg.setAttribute("width", String(Math.round(w)));
+    dispImg.setAttribute("height", String(Math.round(h)));
+    dispImg.setAttribute("href", createOpticalDataUri(w, h, 10, "disp"));
+    specImg.setAttribute("width", String(Math.round(w)));
+    specImg.setAttribute("height", String(Math.round(h)));
+    specImg.setAttribute("href", createOpticalDataUri(w, h, 10, "spec"));
+  };
+
+  const applyTransform = () => {
+    bubble.style.width = `${curW.toFixed(2)}px`;
+    bubble.style.transform = `translate3d(${curX.toFixed(2)}px, 0, 0) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
+    bubble.style.opacity = curW > 0 ? "1" : "0";
+  };
+
+  const stepSpring = () => {
+    const kPos = dragging ? 0.42 : 0.24;
+    const dampPos = dragging ? 0.48 : 0.68;
+    const kScale = 0.26;
+    const dampScale = 0.58;
+
+    const targetSX = dragging ? 1.1 + Math.min(0.12, Math.abs(velX) * 0.012) : 1;
+    const targetSY = dragging ? 1.32 : 1;
+
+    velX = (velX + (targetX - curX) * kPos) * dampPos;
+    velW = (velW + (targetW - curW) * kPos) * dampPos;
+    curX += velX;
+    curW += velW;
+
+    scaleVelX = (scaleVelX + (targetSX - scaleX) * kScale) * dampScale;
+    scaleVelY = (scaleVelY + (targetSY - scaleY) * kScale) * dampScale;
+    scaleX += scaleVelX;
+    scaleY += scaleVelY;
+
+    applyTransform();
+
+    if (
+      Math.abs(targetX - curX) > 0.08 ||
+      Math.abs(targetW - curW) > 0.08 ||
+      Math.abs(velX) > 0.08 ||
+      Math.abs(velW) > 0.08 ||
+      Math.abs(targetSX - scaleX) > 0.002 ||
+      Math.abs(targetSY - scaleY) > 0.002 ||
+      dragging
+    ) {
+      rafId = requestAnimationFrame(stepSpring);
+    } else {
+      curX = targetX;
+      curW = targetW;
+      velX = 0;
+      velW = 0;
+      scaleX = 1;
+      scaleY = 1;
+      applyTransform();
+      rafId = 0;
+    }
+  };
+
+  const kick = () => {
+    if (reducedMotion()) {
+      curX = targetX;
+      curW = targetW;
+      scaleX = 1;
+      scaleY = 1;
+      applyTransform();
+      return;
+    }
+    if (!rafId) rafId = requestAnimationFrame(stepSpring);
+  };
+
+  const setDragging = (next: boolean) => {
+    dragging = next;
+    nav.classList.toggle("is-dragging", next);
+    if (next) {
+      syncLensMaps(curW, bubble.getBoundingClientRect().height || 34);
+    }
+    if (dispMap) dispMap.setAttribute("scale", next ? "24" : "10");
+    if (specAlpha) specAlpha.setAttribute("slope", next ? "0.84" : "0.44");
+  };
+
+  const snapTargetTo = (link: HTMLElement, animate = true) => {
+    targetX = link.offsetLeft;
+    targetW = link.offsetWidth;
+    if (!animate || reducedMotion()) {
+      curX = targetX;
+      curW = targetW;
+      applyTransform();
+    } else {
+      kick();
+    }
+  };
+
+  const setScrubTarget = (clientX: number) => {
+    const navRect = nav.getBoundingClientRect();
+    const relX = clientX - navRect.left;
+    const first = links[0];
+    const last = links[links.length - 1];
+    const firstCenter = first.offsetLeft + first.offsetWidth / 2;
+    const lastCenter = last.offsetLeft + last.offsetWidth / 2;
+
+    if (relX <= firstCenter) {
+      targetX = first.offsetLeft + Math.max(-10, (relX - firstCenter) / 4);
+      targetW = first.offsetWidth;
+      return;
+    }
+    if (relX >= lastCenter) {
+      targetX = last.offsetLeft + Math.min(10, (relX - lastCenter) / 4);
+      targetW = last.offsetWidth;
+      return;
+    }
+
+    for (let i = 0; i < links.length - 1; i++) {
+      const a = links[i];
+      const b = links[i + 1];
+      const ca = a.offsetLeft + a.offsetWidth / 2;
+      const cb = b.offsetLeft + b.offsetWidth / 2;
+      if (relX >= ca && relX <= cb) {
+        const t = cb === ca ? 0 : (relX - ca) / (cb - ca);
+        targetX = a.offsetLeft + (b.offsetLeft - a.offsetLeft) * t;
+        targetW = a.offsetWidth + (b.offsetWidth - a.offsetWidth) * t;
+        return;
+      }
+    }
+  };
 
   const findLinkAtClientX = (clientX: number): HTMLAnchorElement | null => {
     let best: HTMLAnchorElement | null = null;
@@ -225,20 +330,51 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
     return best;
   };
 
+  const saveNavBubbleRect = (link: HTMLElement) => {
+    try {
+      sessionStorage.setItem(
+        NAV_BUBBLE_KEY,
+        JSON.stringify({ x: link.offsetLeft, w: link.offsetWidth })
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  // Seamless cross-page spring entry from the previously clicked/dragged pill if available
+  let restoredPrev = false;
+  try {
+    const raw = sessionStorage.getItem(NAV_BUBBLE_KEY);
+    if (raw) {
+      sessionStorage.removeItem(NAV_BUBBLE_KEY);
+      const prev = JSON.parse(raw) as { x?: number; w?: number };
+      if (typeof prev.x === "number" && typeof prev.w === "number" && prev.w > 0) {
+        restoredPrev = true;
+        curX = prev.x;
+        curW = prev.w;
+        applyTransform();
+        requestAnimationFrame(() => snapTargetTo(activeLink, true));
+      }
+    }
+  } catch {
+    // ignore storage failures
+  }
+
+  if (!restoredPrev) {
+    snapTargetTo(activeLink, false);
+  }
+
   const enterHandlers = links.map((link) => {
     const onEnter = () => {
-      if (!dragging) snapToLink(link, link !== activeLink, true);
+      if (!pointerDown && !dragging) snapTargetTo(link, true);
     };
-    const onFocus = () => snapToLink(link, false, true);
-    const onClick = () => {
-      try {
-        sessionStorage.setItem(
-          NAV_BUBBLE_KEY,
-          JSON.stringify({ x: link.offsetLeft, w: link.offsetWidth })
-        );
-      } catch {
-        // ignore
+    const onFocus = () => snapTargetTo(link, true);
+    const onClick = (e: MouseEvent) => {
+      if (suppressClick) {
+        e.preventDefault();
+        return;
       }
+      saveNavBubbleRect(link);
     };
     link.addEventListener("pointerenter", onEnter);
     link.addEventListener("focus", onFocus);
@@ -250,50 +386,62 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
     };
   });
 
+  const onDragStart = (e: DragEvent) => e.preventDefault();
   const onNavLeave = () => {
-    if (!dragging) snapToLink(activeLink, false, true);
+    if (!pointerDown && !dragging) snapTargetTo(activeLink, true);
   };
 
   const onPointerDown = (e: PointerEvent) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
     pointerDown = true;
-    dragging = false;
+    suppressClick = false;
     downX = e.clientX;
+    holdTimer = window.setTimeout(() => {
+      if (pointerDown) {
+        setDragging(true);
+        setScrubTarget(downX);
+        kick();
+      }
+    }, 75);
   };
 
   const onPointerMove = (e: PointerEvent) => {
     if (!pointerDown) return;
-    if (!dragging && Math.abs(e.clientX - downX) > 6) {
-      dragging = true;
-      nav.classList.add("is-dragging");
+    if (!dragging && Math.abs(e.clientX - downX) > 4) {
+      setDragging(true);
+      kick();
     }
     if (!dragging) return;
-    const hit = findLinkAtClientX(e.clientX);
-    if (hit) snapToLink(hit, true, true);
+    setScrubTarget(e.clientX);
+    kick();
   };
 
   const onPointerUp = (e: PointerEvent) => {
     if (!pointerDown) return;
     pointerDown = false;
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
     if (!dragging) return;
-    dragging = false;
-    nav.classList.remove("is-dragging");
+
+    suppressClick = true;
+    window.setTimeout(() => {
+      suppressClick = false;
+    }, 80);
+
+    setDragging(false);
     const hit = findLinkAtClientX(e.clientX);
     if (hit && hit !== activeLink) {
-      try {
-        sessionStorage.setItem(
-          NAV_BUBBLE_KEY,
-          JSON.stringify({ x: hit.offsetLeft, w: hit.offsetWidth })
-        );
-      } catch {
-        // ignore
-      }
+      snapTargetTo(hit, true);
+      saveNavBubbleRect(hit);
       window.location.href = hit.href;
     } else {
-      snapToLink(activeLink, false, true);
+      snapTargetTo(activeLink, true);
     }
   };
 
+  nav.addEventListener("dragstart", onDragStart);
   nav.addEventListener("pointerleave", onNavLeave);
   nav.addEventListener("pointerdown", onPointerDown);
   window.addEventListener("pointermove", onPointerMove);
@@ -302,13 +450,18 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
 
   let ro: ResizeObserver | null = null;
   if (typeof ResizeObserver !== "undefined") {
-    ro = new ResizeObserver(() => snapToLink(activeLink, false, false));
+    ro = new ResizeObserver(() => {
+      if (!dragging) snapTargetTo(activeLink, false);
+    });
     ro.observe(nav);
   }
 
   return () => {
+    if (rafId) cancelAnimationFrame(rafId);
+    if (holdTimer) clearTimeout(holdTimer);
     enterHandlers.forEach((off) => off());
     ro?.disconnect();
+    nav.removeEventListener("dragstart", onDragStart);
     nav.removeEventListener("pointerleave", onNavLeave);
     nav.removeEventListener("pointerdown", onPointerDown);
     window.removeEventListener("pointermove", onPointerMove);
