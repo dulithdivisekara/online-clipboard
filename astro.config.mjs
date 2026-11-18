@@ -5,6 +5,7 @@ import sitemap from "@astrojs/sitemap";
 
 export default defineConfig({
   site: "https://clipboard.dulith.me",
+  trailingSlash: "never",
   output: "server",
   adapter: cloudflare({
     imageService: "passthrough",
@@ -24,7 +25,8 @@ export default defineConfig({
       filter: (page) =>
         !page.includes("/vault") &&
         !page.includes("/api/") &&
-        !page.includes("/u/"),
+        !page.includes("/u/") &&
+        !page.includes("/sitemap.xml"),
       changefreq: "weekly",
       priority: 0.8,
       lastmod: new Date(),
