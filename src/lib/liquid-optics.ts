@@ -63,79 +63,6 @@ export function flashFaviconSuccess(): void {
   }
 }
 
-function convexSquircle(x: number): number {
-  const clamped = Math.max(0, Math.min(1, x));
-  return Math.pow(1 - Math.pow(1 - clamped, 4), 0.25);
-}
-
-function createOpticalDataUri(
-  width: number,
-  height: number,
-  bezelWidth: number,
-  mode: "disp" | "spec"
-): string {
-  const w = Math.max(16, Math.round(width));
-  const h = Math.max(16, Math.round(height));
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return "";
-
-  const img = ctx.createImageData(w, h);
-  const d = img.data;
-  const r = Math.min(h / 2, w / 2);
-  const specAngle = Math.PI / 3;
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      const dx = Math.min(x, w - 1 - x);
-      const dy = Math.min(y, h - 1 - y);
-      let fromSide = Math.min(dx, dy);
-
-      if (dx < r && dy < r) {
-        const cx = r - dx;
-        const cy = r - dy;
-        fromSide = Math.max(0, r - Math.hypot(cx, cy));
-      }
-
-      if (mode === "disp") {
-        if (fromSide >= bezelWidth) {
-          d[idx] = 128;
-          d[idx + 1] = 128;
-          d[idx + 2] = 0;
-          d[idx + 3] = 255;
-        } else {
-          const t = fromSide / bezelWidth;
-          const mag = convexSquircle(1 - t) * 127;
-          const nx = x < w / 2 ? -1 : 1;
-          const ny = y < h / 2 ? -1 : 1;
-          d[idx] = Math.round(128 + nx * mag * (dx < dy ? 1 : 0.35));
-          d[idx + 1] = Math.round(128 + ny * mag * (dy < dx ? 1 : 0.35));
-          d[idx + 2] = 0;
-          d[idx + 3] = 255;
-        }
-      } else {
-        if (fromSide <= 3.2) {
-          const peak = Math.exp(-Math.pow((fromSide - 0.9) / 1.1, 2));
-          const dir = Math.cos(Math.atan2(y - h / 2, x - w / 2) - specAngle);
-          const alpha = Math.max(0, Math.min(255, Math.round(peak * (0.45 + 0.55 * Math.abs(dir)) * 255)));
-          d[idx] = 255;
-          d[idx + 1] = 255;
-          d[idx + 2] = 255;
-          d[idx + 3] = alpha;
-        } else {
-          d[idx + 3] = 0;
-        }
-      }
-    }
-  }
-
-  ctx.putImageData(img, 0, 0);
-  return canvas.toDataURL("image/png");
-}
-
 export function initLiquidOptics(): void {
   if (typeof window === "undefined") return;
 
@@ -164,10 +91,6 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
   const NAV_BUBBLE_KEY = "cb-nav-bubble";
   const activeLink = nav.querySelector<HTMLAnchorElement>(".nav-link.active") || links[0];
   const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const dispImg = document.getElementById("lgDispImg");
-  const specImg = document.getElementById("lgSpecImg");
-  const dispMap = document.getElementById("lgDispMap");
-  const specAlpha = document.getElementById("lgSpecAlpha");
 
   let curX = activeLink.offsetLeft;
   let curW = activeLink.offsetWidth;
@@ -188,16 +111,6 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
 
   bubble.style.transition = "none";
 
-  const syncLensMaps = (w: number, h: number) => {
-    if (!dispImg || !specImg || w <= 0 || h <= 0) return;
-    dispImg.setAttribute("width", String(Math.round(w)));
-    dispImg.setAttribute("height", String(Math.round(h)));
-    dispImg.setAttribute("href", createOpticalDataUri(w, h, 10, "disp"));
-    specImg.setAttribute("width", String(Math.round(w)));
-    specImg.setAttribute("height", String(Math.round(h)));
-    specImg.setAttribute("href", createOpticalDataUri(w, h, 10, "spec"));
-  };
-
   const applyTransform = () => {
     bubble.style.width = `${curW.toFixed(2)}px`;
     bubble.style.transform = `translate3d(${curX.toFixed(2)}px, 0, 0) scale(${scaleX.toFixed(4)}, ${scaleY.toFixed(4)})`;
@@ -210,8 +123,8 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
     const kScale = 0.26;
     const dampScale = 0.58;
 
-    const targetSX = dragging ? 1.1 + Math.min(0.12, Math.abs(velX) * 0.012) : 1;
-    const targetSY = dragging ? 1.32 : 1;
+    const targetSX = dragging ? 1.06 + Math.min(0.06, Math.abs(velX) * 0.006) : 1;
+    const targetSY = dragging ? 1.14 : 1;
 
     velX = (velX + (targetX - curX) * kPos) * dampPos;
     velW = (velW + (targetW - curW) * kPos) * dampPos;
@@ -262,11 +175,6 @@ export function attachNavBubble(nav: HTMLElement | null): () => void {
   const setDragging = (next: boolean) => {
     dragging = next;
     nav.classList.toggle("is-dragging", next);
-    if (next) {
-      syncLensMaps(curW, bubble.getBoundingClientRect().height || 34);
-    }
-    if (dispMap) dispMap.setAttribute("scale", next ? "24" : "10");
-    if (specAlpha) specAlpha.setAttribute("slope", next ? "0.84" : "0.44");
   };
 
   const snapTargetTo = (link: HTMLElement, animate = true) => {
@@ -478,11 +386,6 @@ export function attachSegmentedSpring(
   const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>(".seg-btn"));
   if (!thumb || buttons.length === 0) return () => {};
 
-  const dispImg = document.getElementById("lgDispImg");
-  const specImg = document.getElementById("lgSpecImg");
-  const dispMap = document.getElementById("lgDispMap");
-  const specAlpha = document.getElementById("lgSpecAlpha");
-
   const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let activeIdx = Math.max(
@@ -507,19 +410,6 @@ export function attachSegmentedSpring(
     return first ? first.getBoundingClientRect().width : 100;
   };
 
-  const syncMaps = () => {
-    const w = getBtnWidth();
-    const h = thumb.getBoundingClientRect().height || 36;
-    if (dispImg && specImg && w > 0) {
-      dispImg.setAttribute("width", String(Math.round(w)));
-      dispImg.setAttribute("height", String(Math.round(h)));
-      dispImg.setAttribute("href", createOpticalDataUri(w, h, 10, "disp"));
-      specImg.setAttribute("width", String(Math.round(w)));
-      specImg.setAttribute("height", String(Math.round(h)));
-      specImg.setAttribute("href", createOpticalDataUri(w, h, 10, "spec"));
-    }
-  };
-
   const applyTransform = () => {
     const w = getBtnWidth();
     thumb.style.width = `${w}px`;
@@ -533,8 +423,8 @@ export function attachSegmentedSpring(
     const kScale = 0.26;
     const dampScale = 0.58;
 
-    const targetSX = dragging ? 1.12 + Math.min(0.1, Math.abs(vel) * 0.16) : 1;
-    const targetSY = dragging ? 1.36 : 1;
+    const targetSX = dragging ? 1.06 + Math.min(0.06, Math.abs(vel) * 0.1) : 1;
+    const targetSY = dragging ? 1.14 : 1;
 
     vel = (vel + (targetIdx - pos) * kPos) * dampPos;
     pos += vel;
@@ -594,8 +484,6 @@ export function attachSegmentedSpring(
   const setDragging = (next: boolean) => {
     dragging = next;
     container.classList.toggle("is-dragging", next);
-    if (dispMap) dispMap.setAttribute("scale", next ? "24" : "10");
-    if (specAlpha) specAlpha.setAttribute("slope", next ? "0.84" : "0.44");
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -654,12 +542,10 @@ export function attachSegmentedSpring(
   let ro: ResizeObserver | null = null;
   if (typeof ResizeObserver !== "undefined") {
     ro = new ResizeObserver(() => {
-      syncMaps();
       applyTransform();
     });
     ro.observe(container);
   }
-  syncMaps();
   applyTransform();
 
   return () => {

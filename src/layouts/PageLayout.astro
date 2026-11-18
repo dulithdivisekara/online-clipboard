@@ -64,16 +64,19 @@ const jsonLdPayload = structuredData
     <script is:inline>
       (function () {
         try {
-          var t = localStorage.getItem("cb-theme") || "auto";
-          var d =
-            t === "dark" ||
-            (t === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-          if (t === "light" || t === "dark") {
-            document.documentElement.setAttribute("data-theme", t);
-          }
+          var saved = localStorage.getItem("cb-theme");
+          var mode =
+            saved === "light" || saved === "dark"
+              ? saved
+              : window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light";
+          document.documentElement.setAttribute("data-theme", mode);
           var m = document.getElementById("themeColorMeta");
-          if (m) m.setAttribute("content", d ? "#090a10" : "#f2f4f8");
-        } catch (e) {}
+          if (m) m.setAttribute("content", mode === "dark" ? "#090a10" : "#f2f4f8");
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "light");
+        }
       })();
     </script>
 
@@ -118,25 +121,6 @@ const jsonLdPayload = structuredData
   </head>
 
   <body>
-    <!-- Offscreen Snell's Law Liquid Glass Optical Filter -->
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-      <defs>
-        <filter id="lg-thumb-lens" x="-28%" y="-56%" width="156%" height="212%" color-interpolation-filters="sRGB">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="blurred_source" />
-          <feImage id="lgDispImg" x="0" y="0" width="120" height="40" preserveAspectRatio="none" result="displacement_map" />
-          <feDisplacementMap id="lgDispMap" in="blurred_source" in2="displacement_map" scale="10" xChannelSelector="R" yChannelSelector="G" result="displaced" />
-          <feColorMatrix in="displaced" type="saturate" values="5.5" result="displaced_saturated" />
-          <feImage id="lgSpecImg" x="0" y="0" width="120" height="40" preserveAspectRatio="none" result="specular_layer" />
-          <feComposite in="displaced_saturated" in2="specular_layer" operator="in" result="specular_saturated" />
-          <feComponentTransfer in="specular_layer" result="specular_faded">
-            <feFuncA id="lgSpecAlpha" type="linear" slope="0.44" />
-          </feComponentTransfer>
-          <feBlend in="specular_saturated" in2="displaced" mode="normal" result="withSaturation" />
-          <feBlend in="specular_faded" in2="withSaturation" mode="normal" />
-        </filter>
-      </defs>
-    </svg>
-
     <!-- Layer 1: Ambient Color Field -->
     <div class="ambient-field" aria-hidden="true">
       <div class="orb orb-1"></div>
@@ -214,13 +198,9 @@ const jsonLdPayload = structuredData
             id="themeToggleBtn"
             type="button"
             class="theme-toggle"
-            aria-label="Switch appearance theme (Auto, Light, Dark)"
-            title="Theme: Auto / Light / Dark"
+            aria-label="Switch between Light and Dark theme"
+            title="Switch Light / Dark theme"
           >
-            <svg class="theme-ico theme-ico-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
-              <path d="M8 21h8M12 17v4"></path>
-            </svg>
             <svg class="theme-ico theme-ico-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="4"></circle>
               <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
@@ -228,7 +208,7 @@ const jsonLdPayload = structuredData
             <svg class="theme-ico theme-ico-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
             </svg>
-            <span id="themeLabel" class="theme-label">Auto</span>
+            <span id="themeLabel" class="theme-label">Light</span>
           </button>
 
           <button
@@ -294,45 +274,43 @@ const jsonLdPayload = structuredData
     <script>
       import { attachNavBubble, initLiquidOptics } from "@lib/liquid-optics";
 
-      const THEME_ORDER = ["auto", "light", "dark"] as const;
-      type ThemeMode = (typeof THEME_ORDER)[number];
+      type ThemeMode = "light" | "dark";
 
-      function syncThemeUi(mode: ThemeMode) {
-        const label = document.getElementById("themeLabel");
-        if (label) {
-          label.textContent = mode === "auto" ? "Auto" : mode === "light" ? "Light" : "Dark";
+      function resolveTheme(): ThemeMode {
+        const attr = document.documentElement.getAttribute("data-theme");
+        if (attr === "light" || attr === "dark") return attr;
+        try {
+          const saved = localStorage.getItem("cb-theme");
+          if (saved === "light" || saved === "dark") return saved;
+        } catch {
+          // ignore
         }
-        const dark =
-          mode === "dark" ||
-          (mode === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-        const meta = document.getElementById("themeColorMeta");
-        if (meta) meta.setAttribute("content", dark ? "#090a10" : "#f2f4f8");
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       }
 
-      const initialTheme = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
-      syncThemeUi(THEME_ORDER.includes(initialTheme) ? initialTheme : "auto");
+      function applyTheme(mode: ThemeMode, persist = true) {
+        document.documentElement.setAttribute("data-theme", mode);
+        if (persist) {
+          try {
+            localStorage.setItem("cb-theme", mode);
+          } catch {
+            // ignore
+          }
+        }
+        const label = document.getElementById("themeLabel");
+        if (label) label.textContent = mode === "dark" ? "Dark" : "Light";
+        const meta = document.getElementById("themeColorMeta");
+        if (meta) meta.setAttribute("content", mode === "dark" ? "#090a10" : "#f2f4f8");
+      }
+
+      applyTheme(resolveTheme(), false);
 
       const themeBtn = document.getElementById("themeToggleBtn");
       themeBtn?.addEventListener("click", () => {
-        const current = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
-        const next = THEME_ORDER[(THEME_ORDER.indexOf(current) + 1) % THEME_ORDER.length];
-
+        const next: ThemeMode = resolveTheme() === "dark" ? "light" : "dark";
         document.documentElement.classList.add("theme-transitioning");
         window.setTimeout(() => document.documentElement.classList.remove("theme-transitioning"), 260);
-
-        if (next === "auto") {
-          document.documentElement.removeAttribute("data-theme");
-          localStorage.removeItem("cb-theme");
-        } else {
-          document.documentElement.setAttribute("data-theme", next);
-          localStorage.setItem("cb-theme", next);
-        }
-        syncThemeUi(next);
-      });
-
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-        const current = (localStorage.getItem("cb-theme") || "auto") as ThemeMode;
-        if (current === "auto") syncThemeUi("auto");
+        applyTheme(next, true);
       });
 
       // Mobile nav popover
