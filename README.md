@@ -1,13 +1,11 @@
 <p align="center">
-  <a href="https://clipboard.dulith.me" target="_blank" rel="noopener noreferrer">
-    <img src="assets/logo.png" width="110" alt="Clipboard Logo" />
-  </a>
+  <img src="assets/logo.png" width="110" alt="Online Clipboard Logo" />
 </p>
 
 <h1 align="center">Online Clipboard</h1>
 
 <p align="center">
-  Cloudflare Workers online clipboard, live WebSocket sync, collaborative scribble, password-protected file drop, and URL analytics at clipboard.dulith.me.
+  Cross-device clipboard for text, code, files, live sync, scribble, and short links.
 </p>
 
 <p align="center">
@@ -31,9 +29,9 @@
 
 ## Overview
 
-Online Clipboard (`clipboard.dulith.me`) is a cross-device transfer suite running on Cloudflare Workers, D1, KV, R2, and Durable Objects. It lets users save and retrieve plain text, Markdown with syntax-highlighted code blocks, images, and files up to 98 MB across mobile and desktop browsers, or sync directly from Apple Shortcuts, Android HTTP Shortcuts, and terminal `curl`.
+Online Clipboard is a cross-device transfer workspace for sharing text, Markdown, syntax-highlighted code, images, files, and short links across desktop and mobile browsers.
 
-The interface follows Apple Human Interface Guidelines and an optical Liquid Glass material system featuring two-layer depth separation, Auto/Light/Dark zero-FOUC theming, Snell's Law SVG refraction on floating pills, hold-and-drag spring segmented controls, and full `320px` responsive support.
+It includes optional client-side end-to-end encryption, password protection, burn-after-read view limits, real-time collaborative rooms, and a headless API for Apple Shortcuts, Android HTTP Shortcuts, and terminal workflows.
 
 ## Architecture
 
