@@ -17,12 +17,11 @@
 
 <p align="center">
   <a href="#overview">Overview</a> &bull;
+  <a href="#preview">Preview</a> &bull;
+  <a href="#features">Features</a> &bull;
   <a href="#architecture">Architecture</a> &bull;
   <a href="#credits-and-enhancements">Credits</a> &bull;
-  <a href="#project-structure">Structure</a> &bull;
   <a href="#installation">Installation</a> &bull;
-  <a href="#usage">Usage</a> &bull;
-  <a href="#verification-tests">Testing</a> &bull;
   <a href="#security-and-privacy">Security</a> &bull;
   <a href="#license">License</a>
 </p>
@@ -32,6 +31,37 @@
 Online Clipboard is a cross-device transfer workspace for sharing text, Markdown, syntax-highlighted code, images, files, and short links across desktop and mobile browsers.
 
 It includes optional client-side end-to-end encryption, password protection, burn-after-read view limits, real-time collaborative rooms, and a headless API for Apple Shortcuts, Android HTTP Shortcuts, and terminal workflows.
+
+## Preview
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <strong>Desktop (Dark)</strong><br />
+      <img src="assets/preview-desktop-dark.png" alt="Online Clipboard Desktop Dark Mode" width="420" />
+    </td>
+    <td align="center" width="50%">
+      <strong>Desktop (Light)</strong><br />
+      <img src="assets/preview-desktop-light.png" alt="Online Clipboard Desktop Light Mode" width="420" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <strong>Mobile (390px Responsive)</strong><br />
+      <img src="assets/preview-mobile.png" alt="Online Clipboard Mobile Layout" width="240" />
+    </td>
+  </tr>
+</table>
+
+## Features
+
+- **Multi-Format Clipboard (`/`)**: Save and retrieve plain text, sanitized GitHub-flavored Markdown with code copy, syntax-highlighted code snippets, and images with custom IDs and `-e` editable links.
+- **Zero-Knowledge E2EE & Burn-After-Read**: Optional browser-side AES-256-GCM encryption (`#key=` retained in URL fragment), salted PBKDF2-SHA256 passwords with brute-force rate limiting, view-count self-destruct, and automatic TTL cleanup.
+- **Real-Time Sync & Scribble (`/live-clipboard`, `/scribble`)**: Low-latency WebSocket rooms backed by Durable Objects for instant text/image sync and collaborative drawing with PNG export.
+- **Large File Transfer (`/file-drop`)**: Drag-and-drop multi-file uploads up to 98 MB with progress tracking, cancel support, download caps, and optional passwords.
+- **URL Shortener & Analytics (`/url`, `/u/[code]+`)**: Custom aliases, QR code sharing, and per-link click telemetry broken down by browser, OS, device type, and country.
+- **Headless Shortcuts & Private Vault (`/shortcuts`, `/vault`)**: Bearer-authenticated `GET`/`POST /api/v1/quick` sync for Apple Shortcuts, Android HTTP Shortcuts, and `curl`, alongside a passcode-locked storage vault and local clip history.
+- **Liquid Glass UI**: Light and Dark themes, hold-and-drag spring navigation and segmented controls, and responsive layouts verified down to `320px`.
 
 ## Architecture
 
