@@ -60,14 +60,14 @@ graph TD
 
 ## Credits and Enhancements
 
-This project is forked from `SarathAdhi/Online-Clipboard` and synthesizes, upgrades, and secures ideas from four open-source clipboard repositories.
+Forked from `SarathAdhi/Online-Clipboard`, integrating and upgrading ideas from four open-source clipboard projects:
 
-| Source Repository | Features Adapted | Upgrades & Enhancements Implemented |
+| Repository | Adapted Features | Enhancements |
 | :--- | :--- | :--- |
-| [SarathAdhi/Online-Clipboard](https://github.com/SarathAdhi/Online-Clipboard) | Core text/image clipboard by ID, `-e` editable clips, Live Clipboard, Scribble, File Drop, URL Shortener with `+` analytics | Upgraded Astro 2/Vercel/Supabase to Astro 6 + Cloudflare Workers/D1/R2/Durable Objects; replaced client-side plaintext password queries with salted PBKDF2-SHA256; fixed XSS in linkify and UUID collision loop bug; added Liquid Glass UI and SEO |
-| [ling-drag0n/CloudPaste-old](https://github.com/ling-drag0n/CloudPaste-old) | Cloudflare Edge storage model, TTL expiration, max-view burn limits, Markdown preview, QR sharing, multi-file upload progress/cancel, local draft auto-save, TXT/MD/PDF export, admin upload toggles | Replaced monolithic single-file Worker and unsalted SHA-256 with modular Astro API routes, PBKDF2 hashing, optional browser-side AES-256-GCM E2EE, and responsive mobile-first design down to `320px` |
-| [YanxinTang/clipboard-online](https://github.com/YanxinTang/clipboard-online) | Headless `GET`/`POST` clipboard API for Apple Shortcuts, Android HTTP Shortcuts/Tasker, and `X-Client-Name` tracking | Upgraded LAN-only Go desktop server and MD5 auth to global edge `/api/v1/quick` endpoint with Bearer token authentication and interactive setup guide at `/shortcuts` |
-| [a-robert/online-clipboard](https://github.com/a-robert/online-clipboard) | Authenticated personal clipboard workspace route (`/vault`) separated from public quick access | Replaced stubbed client-side auth with HMAC-SHA256 HTTP-only cookie authentication backed by Cloudflare Worker secrets |
+| [SarathAdhi/Online-Clipboard](https://github.com/SarathAdhi/Online-Clipboard) | Clip IDs, `-e` edits, Live Sync, Scribble, File Drop, URL `+` stats | Rebuilt on Cloudflare Workers/D1/R2/DO, PBKDF2 auth, XSS fixes, Liquid Glass UI |
+| [ling-drag0n/CloudPaste-old](https://github.com/ling-drag0n/CloudPaste-old) | TTL expiry, burn limits, Markdown, QR, upload progress, export | Modular Astro routes, PBKDF2 passwords, AES-256-GCM E2EE, `320px` responsive UI |
+| [YanxinTang/clipboard-online](https://github.com/YanxinTang/clipboard-online) | Headless `GET`/`POST` sync API and `X-Client-Name` tracking | Global `/api/v1/quick` edge endpoint with Bearer auth and `/shortcuts` guide |
+| [a-robert/online-clipboard](https://github.com/a-robert/online-clipboard) | Separate authenticated personal vault (`/vault`) | Server-side HMAC-SHA256 HTTP-only cookie auth via Worker secrets |
 
 ## Project Structure
 
