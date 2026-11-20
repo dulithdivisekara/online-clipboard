@@ -34,24 +34,13 @@ It includes optional client-side end-to-end encryption, password protection, bur
 
 ## Preview
 
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <strong>Desktop (Dark)</strong><br />
-      <img src="assets/preview-desktop-dark.png" alt="Online Clipboard Desktop Dark Mode" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <strong>Desktop (Light)</strong><br />
-      <img src="assets/preview-desktop-light.png" alt="Online Clipboard Desktop Light Mode" width="420" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <strong>Mobile (390px Responsive)</strong><br />
-      <img src="assets/preview-mobile.png" alt="Online Clipboard Mobile Layout" width="240" />
-    </td>
-  </tr>
-</table>
+**Dark Mode**
+
+![Online Clipboard Dark Mode](assets/preview-desktop-dark.png)
+
+**Light Mode**
+
+![Online Clipboard Light Mode](assets/preview-desktop-light.png)
 
 ## Features
 
